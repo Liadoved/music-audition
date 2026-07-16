@@ -272,6 +272,7 @@ async function syncLoadRater(name) {
     }
     syncStat('☁ מסונכרן');
   } catch (e) { syncStat('⚠ מקומי בלבד'); }
+  render();  // refresh stars/counters with whatever the merge brought back
   syncPushSoon();
 }
 
