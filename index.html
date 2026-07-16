@@ -217,7 +217,12 @@ const save = () => { localStorage.setItem(LS2, JSON.stringify(all)); localStorag
 // ---- cloud sync ----
 let myDocKey = localStorage.getItem('wewish_synckey') || '';
 let pushTimer = null;
-const syncStat = msg => { const el = $('#syncstat'); if (el) el.textContent = msg; };
+const syncStat = msg => { const el = $('#syncstat'); if (!el) return;
+  el.textContent = msg; el.style.color = msg.startsWith('⚠') ? 'var(--red)' : 'var(--dim)'; };
+// deterministic doc key per rater name — same name on any device => same doc
+const nameKey = name => { let h = 5381;
+  for (const c of name.trim()) h = ((h * 33) ^ c.codePointAt(0)) >>> 0;
+  return 'd' + h.toString(16).padStart(8, '0'); };
 const sFetch = (url, opts = {}) => { // never hang the UI: 6s hard timeout
   const ctl = new AbortController();
   setTimeout(() => ctl.abort(), 6000);
@@ -236,28 +241,53 @@ const hasData = v => v && (+userAvg(v) > 0 || v.fav || v.note);
 
 async function syncLoadRater(name) {
   syncStat('☁ טוען…');
+  const det = nameKey(name);
+  myDocKey = det;
+  localStorage.setItem('wewish_synckey', det);
   try {
-    const idx = (await sGet('index').catch(() => null)) || { raters: {} };
-    let key = idx.raters[name];
-    if (!key) { // new rater: register in the index
-      key = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)).replace(/-/g, '').slice(0, 10);
-      idx.raters[name] = key;
-      await sPut('index', idx);
-    } else { // returning rater: adopt server ratings where local is empty
-      const doc = await sGet('r-' + key).catch(() => null);
-      if (doc && doc.ratings) {
-        const local = all[name] || (all[name] = {});
-        for (const [id, v] of Object.entries(doc.ratings))
-          if (!hasData(local[id])) local[id] = v;
-        localStorage.setItem(LS2, JSON.stringify(all));
-      }
+    // gather every server copy of this rater: deterministic doc + legacy doc (old random key)
+    const sources = [];
+    const d1 = await sGet('r-' + det).catch(() => null);
+    if (d1 && d1.ratings) sources.push(d1.ratings);
+    const idx0 = await sGet('index').catch(() => null);
+    const legacy = idx0 && idx0.raters && idx0.raters[name];
+    if (legacy && legacy !== det) {
+      const d2 = await sGet('r-' + legacy).catch(() => null);
+      if (d2 && d2.ratings) sources.push(d2.ratings);
     }
-    myDocKey = key;
-    localStorage.setItem('wewish_synckey', key);
+    // merge into local: never overwrite a local entry that has data
+    const local = all[name] || (all[name] = {});
+    for (const ratings of sources)
+      for (const [id, v] of Object.entries(ratings))
+        if (!hasData(local[id])) local[id] = v;
+    localStorage.setItem(LS2, JSON.stringify(all));
+    // self-healing index entry: write + verify, up to 3 attempts
+    for (let i = 0; i < 3; i++) {
+      const cur = (await sGet('index').catch(() => null)) || { raters: {} };
+      if (cur.raters[name] === det) break;
+      cur.raters[name] = det;
+      await sPut('index', cur);
+      const chk = await sGet('index').catch(() => null);
+      if (chk && chk.raters && chk.raters[name] === det) break;
+    }
     syncStat('☁ מסונכרן');
-    syncPushSoon();
   } catch (e) { syncStat('⚠ מקומי בלבד'); }
+  syncPushSoon();
 }
+
+// flush pending ratings the moment the page closes or hides (no debounce loss)
+function flushNow() {
+  if (!rater || !myDocKey) return;
+  clearTimeout(pushTimer);
+  const ratings = {};
+  for (const [id, v] of Object.entries(mine())) if (hasData(v)) ratings[id] = v;
+  if (!Object.keys(ratings).length) return;
+  const payload = JSON.stringify({ rater, updated: new Date().toISOString(), ratings });
+  // text/plain keeps sendBeacon CORS-safelisted; the store keeps raw bytes either way
+  navigator.sendBeacon(SYNC_BASE + SYNC_NS + '-r-' + myDocKey, new Blob([payload], { type: 'text/plain' }));
+}
+window.addEventListener('pagehide', flushNow);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushNow(); });
 
 function syncPushSoon() {
   if (!rater || !myDocKey) return;
