@@ -29,6 +29,16 @@
   .btn { background: var(--panel2); border: 1px solid var(--line); color: var(--text);
          border-radius: 8px; padding: 5px 12px; cursor: pointer; font-size: 13px; }
   .btn:hover { border-color: var(--amber); }
+  #battlebtn { background: linear-gradient(135deg, var(--amber), #ffd28a); color: var(--amber-text);
+               border: none; font-weight: 800; box-shadow: 0 2px 14px rgba(240,168,64,.4); }
+  #battlebtn:hover { transform: scale(1.04); }
+  #battlefab { position: fixed; bottom: 96px; left: 14px; z-index: 40; display: none;
+               align-items: center; gap: 8px; background: linear-gradient(135deg, var(--amber), #ffd28a);
+               color: var(--amber-text); border: none; border-radius: 30px; padding: 15px 24px;
+               font-size: 17px; font-weight: 900; cursor: pointer;
+               box-shadow: 0 6px 24px rgba(240,168,64,.5); animation: fabpulse 2.6s infinite; }
+  @keyframes fabpulse { 50% { transform: scale(1.06); box-shadow: 0 6px 30px rgba(240,168,64,.75); } }
+  @media (max-width: 700px) { #battlefab { display: flex; } }
   main { max-width: 1180px; margin: 18px auto; padding: 0 22px;
          display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
@@ -64,8 +74,8 @@
   .stars { display: flex; gap: 2px; direction: ltr; }
   .star { font-size: 21px; color: #3a4148; cursor: pointer; transition: color .1s; }
   .star.on { color: var(--amber); }
-  .heart { font-size: 19px; cursor: pointer; color: #3a4148; margin-inline-start: auto; }
-  .heart.on { color: var(--red); }
+  .heart { font-size: 21px; cursor: pointer; color: #6b7480; margin-inline-start: auto; line-height: 1; }
+  .heart.on { color: var(--red); text-shadow: 0 0 10px rgba(224,122,106,.5); }
   .note { width: 100%; margin-top: 8px; background: var(--panel2); border: 1px solid var(--line);
           color: var(--text); border-radius: 7px; padding: 4px 9px; font-size: 12.5px; }
   #playerbar { position: fixed; bottom: 0; right: 0; left: 0; z-index: 30; background: #15181b;
@@ -141,6 +151,7 @@
   </div>
 </header>
 <main id="grid"></main>
+<button id="battlefab">⚔️ קרבות!</button>
 <div id="playerbar">
   <button class="play" id="pp">▶</button>
   <div id="nowname">—</div>
@@ -548,7 +559,7 @@ function render() {
           `<span class="star ${(v[k] || 0) >= i ? 'on' : ''}" data-i="${i}">★</span>`).join('')}</div>`).join('')}</div>
       <div class="row3">
         <span class="plabel">ממוצע שלי: <b style="color:var(--amber)">${userAvg(v) || '—'}</b></span>
-        <span class="heart ${v.fav ? 'on' : ''}" data-act="fav">❤</span>
+        <span class="heart ${v.fav ? 'on' : ''}" data-act="fav">${v.fav ? '\u2665\uFE0E' : '\u2661\uFE0E'}</span>
       </div>
       <input class="note" data-act="note" placeholder="הערה..." value="${(v.note || '').replace(/"/g, '&quot;')}">
     </div>`; }).join('');
@@ -881,8 +892,10 @@ function srelease() {
 atrack.addEventListener('pointerup', srelease);
 atrack.addEventListener('pointercancel', srelease);
 
-$('#battlebtn').onclick = () => { if (!rater) { showWelcome(); return; }
+const openArena = () => { if (!rater) { showWelcome(); return; }
   $('#arena').classList.remove('hidden'); startBattle(); };
+$('#battlebtn').onclick = openArena;
+$('#battlefab').onclick = openArena;
 $('#aexit').onclick = () => { clearBattleTimers(); music.pause(); speech.pause();
   battle = null; speech.src = VOICES[0]; lastVoice = 0; $('#arena').classList.add('hidden'); };
 $('#askip').onclick = startBattle;
