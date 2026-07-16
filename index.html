@@ -166,51 +166,97 @@
 </style>
 <div id="arena" class="hidden">
   <div class="abar">
-    <button class="btn" id="aexit">✕ חזרה לרשימה</button>
-    <span id="amood"></span>
-    <button class="btn" id="aspeech">🎤 מבחן דיבור</button>
+    <button class="btn" id="aexit">✕ יציאה</button>
+    <div class="atitle">⚔️ זירת הקרבות</div>
+    <button class="btn" id="aspeech" title="מנגן ברכה אמיתית מעל המוזיקה">🎤 מבחן דיבור</button>
   </div>
+  <div class="agenre" id="amood"></div>
+  <div class="astats"><span id="abattleno"></span><span class="adot">·</span><span id="atotal"></span></div>
   <div class="aduel">
-    <div class="acard" id="acardL">
-      <div class="aname"></div><div class="ainfo"></div>
-      <div class="apulse">♪</div>
-      <button class="btn areplay">▶ שמע שוב</button>
+    <div class="acard sideL" id="acardL">
+      <div class="acrown">👑</div>
+      <div class="aside">הצד הכתום</div>
+      <div class="aname"></div>
+      <div class="ainfo"></div>
+      <div class="aeq"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="aprog"><div class="abar2"></div></div>
+      <button class="areplay">▶ שמע שוב</button>
       <button class="awin">🏆 זה המנצח</button>
     </div>
-    <div class="avs">⚔️</div>
-    <div class="acard" id="acardR">
-      <div class="aname"></div><div class="ainfo"></div>
-      <div class="apulse">♪</div>
-      <button class="btn areplay">▶ שמע שוב</button>
+    <div class="avs"><span>VS</span></div>
+    <div class="acard sideR" id="acardR">
+      <div class="acrown">👑</div>
+      <div class="aside">הצד הטורקיז</div>
+      <div class="aname"></div>
+      <div class="ainfo"></div>
+      <div class="aeq"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="aprog"><div class="abar2"></div></div>
+      <button class="areplay">▶ שמע שוב</button>
       <button class="awin">🏆 זה המנצח</button>
     </div>
   </div>
+  <div id="astatus"></div>
+  <div class="akeys">⬅ בוחר את השמאלי &nbsp;·&nbsp; ➡ בוחר את הימני</div>
   <button class="btn" id="askip">↷ דלג לקרב הבא</button>
-  <p class="ahint">שני הצדדים מתנגנים אוטומטית 10 שניות כל אחד, משמאל לימין · הבחירה נרשמת ומשפיעה על הדירוג מאחורי הקלעים · קרב הוגן — אותו ז'אנר</p>
 </div>
 <style>
-  #arena { position: fixed; inset: 0; z-index: 95; background: rgba(12,14,16,.97);
-           display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 20px; }
-  .abar { display: flex; gap: 14px; align-items: center; }
-  #amood { background: var(--amber); color: var(--amber-text); border-radius: 20px; padding: 5px 16px; font-weight: 700; font-size: 14px; }
+  #arena { position: fixed; inset: 0; z-index: 95; overflow: auto;
+           background: radial-gradient(1200px 600px at 50% -10%, #232a33 0%, #101214 60%);
+           display: flex; flex-direction: column; align-items: center; justify-content: center;
+           gap: 12px; padding: 24px 16px; }
+  .abar { display: flex; gap: 16px; align-items: center; width: min(860px, 94vw); justify-content: space-between; }
+  .atitle { font-size: 17px; font-weight: 800; letter-spacing: .5px; color: var(--dim); }
   #aspeech.on { background: var(--amber); color: var(--amber-text); border-color: var(--amber); font-weight: 700; }
-  .aduel { display: flex; direction: ltr; gap: 26px; align-items: stretch; }
-  .acard { width: min(320px, 40vw); background: var(--panel); border: 2px solid var(--line); border-radius: 16px;
-           padding: 22px 20px; text-align: center; transition: border-color .25s, transform .25s, box-shadow .25s;
-           display: flex; flex-direction: column; gap: 10px; align-items: center; }
-  .acard.playing { border-color: var(--amber); box-shadow: 0 0 26px rgba(240,168,64,.25); transform: translateY(-4px); }
-  .acard.winner { border-color: var(--green); box-shadow: 0 0 30px rgba(88,201,140,.4); transform: scale(1.04); }
-  .aname { font-size: 19px; font-weight: 700; min-height: 48px; display: flex; align-items: center; }
+  .agenre { font-size: 30px; font-weight: 900; margin-top: 2px;
+            background: linear-gradient(90deg, var(--amber), #ffd9a0);
+            -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .astats { color: var(--dim); font-size: 13.5px; display: flex; gap: 10px; align-items: center; }
+  .astats .adot { opacity: .5; }
+  .aduel { display: flex; direction: ltr; gap: 18px; align-items: stretch; margin-top: 6px; }
+  .acard { --acc: var(--amber); position: relative; width: min(330px, 41vw);
+           background: linear-gradient(180deg, #1d2126, #171a1e); border: 2px solid var(--line);
+           border-radius: 18px; padding: 22px 20px 18px; text-align: center;
+           display: flex; flex-direction: column; gap: 9px; align-items: center;
+           transition: border-color .25s, transform .25s, box-shadow .25s; }
+  .acard.sideR { --acc: #4dd0c4; }
+  .aside { font-size: 12px; font-weight 700; color: var(--acc); letter-spacing: .6px;
+           border: 1px solid var(--acc); border-radius: 20px; padding: 2px 12px; opacity: .85; }
+  .acard.playing { border-color: var(--acc); transform: translateY(-5px);
+                   box-shadow: 0 10px 40px color-mix(in srgb, var(--acc) 30%, transparent); }
+  .acard.winner { border-color: var(--green); transform: scale(1.05);
+                  box-shadow: 0 0 40px rgba(88,201,140,.45); }
+  .acrown { position: absolute; top: -26px; right: 50%; transform: translateX(50%) scale(0); font-size: 34px;
+            transition: transform .4s cubic-bezier(.2,2,.4,1); }
+  .acard.winner .acrown { transform: translateX(50%) scale(1); }
+  .aname { font-size: 20px; font-weight: 800; min-height: 52px; display: flex; align-items: center; line-height: 1.25; }
   .ainfo { color: var(--dim); font-size: 13px; min-height: 18px; }
-  .apulse { font-size: 26px; color: var(--line); }
-  .acard.playing .apulse { color: var(--amber); animation: apulse 1s infinite; }
-  @keyframes apulse { 50% { transform: scale(1.35); } }
-  .awin { background: var(--amber); color: var(--amber-text); border: none; border-radius: 10px;
-          padding: 12px 20px; font-size: 16px; font-weight: 800; cursor: pointer; width: 100%; }
+  .aeq { display: flex; gap: 4px; height: 26px; align-items: flex-end; }
+  .aeq i { width: 5px; height: 6px; background: var(--line); border-radius: 3px; }
+  .acard.playing .aeq i { background: var(--acc); animation: eq .7s infinite ease-in-out alternate; }
+  .acard.playing .aeq i:nth-child(1) { animation-delay: 0s; } .acard.playing .aeq i:nth-child(2) { animation-delay: .15s; }
+  .acard.playing .aeq i:nth-child(3) { animation-delay: .3s; } .acard.playing .aeq i:nth-child(4) { animation-delay: .1s; }
+  .acard.playing .aeq i:nth-child(5) { animation-delay: .25s; }
+  @keyframes eq { from { height: 5px; } to { height: 24px; } }
+  .aprog { width: 100%; height: 5px; background: #262b31; border-radius: 3px; overflow: hidden; }
+  .abar2 { width: 0; height: 100%; background: var(--acc); border-radius: 3px; }
+  .areplay { background: transparent; border: 1px solid var(--line); color: var(--text);
+             border-radius: 9px; padding: 7px 14px; font-size: 13.5px; cursor: pointer; width: 100%; }
+  .areplay:hover { border-color: var(--acc); color: var(--acc); }
+  .awin { background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 92%, white), var(--acc));
+          color: #14100a; border: none; border-radius: 11px; padding: 13px 20px;
+          font-size: 16.5px; font-weight: 900; cursor: pointer; width: 100%;
+          box-shadow: 0 4px 16px color-mix(in srgb, var(--acc) 35%, transparent); }
   .awin:hover { transform: scale(1.03); }
-  .avs { font-size: 34px; align-self: center; }
-  .ahint { color: var(--dim); font-size: 12.5px; max-width: 620px; text-align: center; margin: 0; }
-  @media (max-width: 700px) { .aduel { flex-direction: column; } .acard { width: 82vw; } }
+  #arena.decide .awin { animation: pulsewin 1.1s infinite; }
+  @keyframes pulsewin { 50% { transform: scale(1.045); } }
+  .avs { align-self: center; font-size: 30px; font-weight: 900; font-style: italic;
+         color: #fff; background: #22272d; border: 2px solid var(--line); border-radius: 50%;
+         width: 74px; height: 74px; display: flex; align-items: center; justify-content: center;
+         text-shadow: 0 0 18px rgba(240,168,64,.6); flex: 0 0 74px; }
+  #astatus { font-size: 16.5px; font-weight: 700; color: var(--amber); min-height: 24px; }
+  .akeys { color: var(--dim); font-size: 12px; }
+  @media (max-width: 700px) { .aduel { flex-direction: column; align-items: center; }
+    .acard { width: 86vw; } .avs { width: 54px; height: 54px; font-size: 21px; flex-basis: auto; } }
 </style>
 <div id="welcome" class="hidden">
   <div class="wbox">
@@ -684,14 +730,26 @@ function pickBattle() {
 function startBattle() {
   clearBattleTimers(); music.pause(); speech.pause();
   battle = pickBattle();
-  $('#amood').textContent = 'קרב ' + (myBattles().length + 1) + ' · ' + battle.a.mood_he + (battle.a.lane_he ? ' · ' + battle.a.lane_he : '');
+  $('#arena').classList.remove('decide');
+  $('#amood').textContent = battle.a.mood_he + (battle.a.lane_he ? ' · ' + battle.a.lane_he : '');
+  $('#abattleno').textContent = 'קרב #' + (myBattles().length + 1);
+  $('#atotal').textContent = '⚡ ' + myBattles().length + ' קרבות הכרעת עד עכשיו';
   for (const [side, t] of [['L', battle.a], ['R', battle.b]]) {
     const el = $('#acard' + side);
     el.querySelector('.aname').textContent = t.name;
-    el.querySelector('.ainfo').textContent = t.lane_he || '';
+    const mm = Math.floor(t.dur_s / 60), ss = String(Math.round(t.dur_s % 60)).padStart(2, '0');
+    el.querySelector('.ainfo').textContent = (t.lane_he ? t.lane_he + ' · ' : '') + mm + ':' + ss;
     el.classList.remove('winner', 'playing');
+    const bar = el.querySelector('.abar2');
+    bar.style.transition = 'none'; bar.style.width = '0%';
   }
   playSide(0, true);
+}
+
+function setProgress(side, run) {
+  const bar = $('#acard' + (side === 0 ? 'L' : 'R') + ' .abar2');
+  bar.style.transition = 'none'; bar.style.width = '0%';
+  if (run) { void bar.offsetWidth; bar.style.transition = 'width ' + (BDUR / 1000) + 's linear'; bar.style.width = '100%'; }
 }
 
 function playSide(side, autoChain) {
@@ -704,23 +762,38 @@ function playSide(side, autoChain) {
   if (speechOn) { speech.currentTime = 0; speech.play().catch(() => {}); }
   $('#acardL').classList.toggle('playing', side === 0);
   $('#acardR').classList.toggle('playing', side === 1);
+  setProgress(side, true); setProgress(side === 0 ? 1 : 0, false);
+  $('#astatus').textContent = side === 0 ? '🎧 מקשיבים לצד הכתום…' : '🎧 ועכשיו הצד הטורקיז…';
   battleTimers.push(setTimeout(() => {
     $('#acard' + (side === 0 ? 'L' : 'R')).classList.remove('playing');
     if (side === 0 && autoChain) playSide(1, true);
-    else { music.pause(); speech.pause(); }
+    else {
+      music.pause(); speech.pause();
+      $('#arena').classList.add('decide');
+      $('#astatus').textContent = '🔥 שמעתם את שניהם — מי לוקח את הקרב?';
+    }
   }, BDUR));
 }
 
 function recordBattle(winnerSide) {
-  if (!battle) return;
+  if (!battle || battle.done) return;
+  battle.done = true;
   clearBattleTimers(); music.pause(); speech.pause();
   const w = winnerSide === 0 ? battle.a : battle.b;
   myBattles().push({ a: battle.a.id, b: battle.b.id, winner: w.id, mood: battle.a.mood, lane: battle.a.lane || null, t: new Date().toISOString() });
   saveBattles();
+  $('#arena').classList.remove('decide');
   $('#acard' + (winnerSide === 0 ? 'L' : 'R')).classList.add('winner');
   $('#acardL').classList.remove('playing'); $('#acardR').classList.remove('playing');
-  battleTimers.push(setTimeout(startBattle, 900));
+  $('#astatus').textContent = '🏆 ' + w.name + ' לוקח את הקרב!';
+  battleTimers.push(setTimeout(startBattle, 1100));
 }
+
+document.addEventListener('keydown', e => {
+  if (!battle || $('#arena').classList.contains('hidden')) return;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); recordBattle(0); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); recordBattle(1); }
+});
 
 $('#battlebtn').onclick = () => { if (!rater) { showWelcome(); return; }
   $('#arena').classList.remove('hidden'); startBattle(); };
