@@ -77,6 +77,19 @@
   .vol { width: 90px; }
   #toast { position: fixed; bottom: 120px; right: 50%; transform: translateX(50%); background: var(--amber);
            color: var(--amber-text); font-weight: 600; border-radius: 10px; padding: 8px 18px; display: none; z-index: 40; }
+  #welcome { position: fixed; inset: 0; z-index: 100; background: rgba(10,12,14,.82); backdrop-filter: blur(7px);
+             display: flex; align-items: center; justify-content: center; }
+  #welcome.hidden { display: none; }
+  .wbox { background: var(--panel); border: 1px solid var(--amber); border-radius: 16px; padding: 34px 38px;
+          max-width: 420px; width: 90%; text-align: center; box-shadow: 0 12px 60px rgba(0,0,0,.6); }
+  .wbox h2 { margin: 0 0 8px; font-size: 22px; }
+  .wbox p { color: var(--dim); margin: 0 0 18px; font-size: 14.5px; line-height: 1.6; }
+  #wname { width: 100%; box-sizing: border-box; background: var(--panel2); border: 1px solid var(--line);
+           color: var(--text); border-radius: 10px; padding: 12px 14px; font-size: 17px; text-align: center; }
+  #wname:focus { outline: none; border-color: var(--amber); }
+  #wstart { margin-top: 14px; width: 100%; background: var(--amber); color: var(--amber-text); border: none;
+            border-radius: 10px; padding: 12px; font-size: 16px; font-weight: 700; cursor: pointer; }
+  #wstart:disabled { opacity: .35; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -132,19 +145,27 @@
   <input type="range" class="vol" id="vol" min="0" max="100" value="90" title="עוצמת מוזיקה">
 </div>
 <div id="toast"></div>
+<div id="welcome" class="hidden">
+  <div class="wbox">
+    <h2>👋 ברוכים הבאים לאודישן המוזיקה</h2>
+    <p>לפני שמתחילים להאזין ולדרג — כתבו את שמכם.<br>הדירוגים נשמרים על שמכם, וכך נוכל לשקלל את כל הבחירות יחד.</p>
+    <input id="wname" placeholder="השם שלך" autocomplete="off" maxlength="30">
+    <button id="wstart" disabled>מתחילים להאזין ✨</button>
+  </div>
+</div>
 <audio id="music" preload="none"></audio>
 <audio id="speech" src="speech/speech_test.mp3" preload="auto" loop></audio>
 <script>
 const LS2 = 'wewish_ratings_v2', LSR = 'wewish_rater', LSI = 'wewish_imported';
 let tracks = [], all = JSON.parse(localStorage.getItem(LS2) || '{}');
 let imported = JSON.parse(localStorage.getItem(LSI) || '{}');
-let rater = localStorage.getItem(LSR) || 'ליעד';
-// migrate v1 single-rater ratings into the current rater once
+let rater = (localStorage.getItem(LSR) || '').trim();
+// migrate v1 single-rater ratings (Liad's early session) once
 const v1 = JSON.parse(localStorage.getItem('wewish_music_ratings_v1') || 'null');
-if (v1 && !all[rater]) {
-  all[rater] = {};
+if (v1 && !all['ליעד']) {
+  all['ליעד'] = {};
   for (const [id, v] of Object.entries(v1))
-    all[rater][id] = { pro: v.r || 0, pop: v.r || 0, msg: v.r || 0, fav: !!v.fav, note: v.note || '' };
+    all['ליעד'][id] = { pro: v.r || 0, pop: v.r || 0, msg: v.r || 0, fav: !!v.fav, note: v.note || '' };
   localStorage.setItem(LS2, JSON.stringify(all));
 }
 let filt = { src: '', mood: '', lane: '', fav: false, q: '', sort: 'default' };
@@ -164,8 +185,9 @@ if (!localStorage.getItem('wewish_scale10')) {
   localStorage.setItem('wewish_scale10', '1');
 }
 const claude10 = t => ((t.claude.pro + t.claude.pop + t.claude.msg) / 3 * 2).toFixed(1);
+const EMPTY_R = Object.freeze({ pro: 0, pop: 0, msg: 0, fav: false, note: '' });
 const mine = () => all[rater] || (all[rater] = {});
-const st = id => mine()[id] || (mine()[id] = { pro: 0, pop: 0, msg: 0, fav: false, note: '' });
+const st = id => rater ? (mine()[id] || (mine()[id] = { pro: 0, pop: 0, msg: 0, fav: false, note: '' })) : { ...EMPTY_R };
 const save = () => { localStorage.setItem(LS2, JSON.stringify(all)); localStorage.setItem(LSR, rater); counters(); };
 const userAvg = v => { const p = [v.pro, v.pop, v.msg].filter(x => x > 0);
   return p.length ? (p.reduce((a, b) => a + b) / p.length).toFixed(1) : 0; };
@@ -258,6 +280,7 @@ function render() {
 }
 
 $('#grid').addEventListener('click', e => {
+  if (!rater) { showWelcome(); return; }
   const card = e.target.closest('.card'); if (!card) return;
   const id = card.dataset.id, act = e.target.closest('[data-act]')?.dataset.act;
   if (act === 'play') { cur === id && !music.paused ? music.pause() : playTrack(id); }
@@ -344,11 +367,34 @@ $('#importfile').onchange = async e => {
 const raterInput = $('#rater');
 raterInput.value = rater;
 raterInput.onchange = () => {
-  rater = raterInput.value.trim() || 'ליעד';
+  const v = raterInput.value.trim();
+  if (!v) { rater = ''; localStorage.removeItem(LSR); showWelcome(); return; }
+  rater = v;
   localStorage.setItem(LSR, rater);
   toast(`מדרג נוכחי: ${rater}`);
   render();
 };
+
+// ---- welcome gate: a name is required before any interaction ----
+const welcome = $('#welcome'), wname = $('#wname'), wstart = $('#wstart');
+function showWelcome() {
+  welcome.classList.remove('hidden');
+  wname.value = '';
+  wstart.disabled = true;
+  setTimeout(() => wname.focus(), 100);
+}
+wname.oninput = () => { wstart.disabled = !wname.value.trim(); };
+wname.onkeydown = e => { if (e.key === 'Enter' && wname.value.trim()) wstart.click(); };
+wstart.onclick = () => {
+  rater = wname.value.trim();
+  if (!rater) return;
+  localStorage.setItem(LSR, rater);
+  raterInput.value = rater;
+  welcome.classList.add('hidden');
+  toast(`שלום ${rater}! אפשר להתחיל לדרג`);
+  render();
+};
+if (!rater) showWelcome();
 $('#top30').onclick = () => {
   filt.fav = !filt.fav; $('.chip.fav').classList.toggle('on', filt.fav);
   filt.sort = 'rating'; $('#sort').value = 'rating'; render();
