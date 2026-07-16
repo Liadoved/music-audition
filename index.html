@@ -11,6 +11,7 @@
     --green: #58c98c; --red: #e07a6a; --yellow: #e6c35c;
   }
   * { box-sizing: border-box; }
+  .hidden { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--text);
          font: 15px/1.5 -apple-system, "Segoe UI", Rubik, Arial, sans-serif; padding-bottom: 110px; }
   header { position: sticky; top: 0; z-index: 20; background: rgba(16,18,20,.94);
@@ -217,13 +218,18 @@ const save = () => { localStorage.setItem(LS2, JSON.stringify(all)); localStorag
 let myDocKey = localStorage.getItem('wewish_synckey') || '';
 let pushTimer = null;
 const syncStat = msg => { const el = $('#syncstat'); if (el) el.textContent = msg; };
+const sFetch = (url, opts = {}) => { // never hang the UI: 6s hard timeout
+  const ctl = new AbortController();
+  setTimeout(() => ctl.abort(), 6000);
+  return fetch(url, { ...opts, signal: ctl.signal });
+};
 const sGet = async key => {
-  const r = await fetch(SYNC_BASE + SYNC_NS + '-' + key, { cache: 'no-store' });
+  const r = await sFetch(SYNC_BASE + SYNC_NS + '-' + key, { cache: 'no-store' });
   if (!r.ok) throw new Error('http ' + r.status);
   const txt = await r.text();
   return txt ? JSON.parse(txt) : null;
 };
-const sPut = (key, obj) => fetch(SYNC_BASE + SYNC_NS + '-' + key, {
+const sPut = (key, obj) => sFetch(SYNC_BASE + SYNC_NS + '-' + key, {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
 
 const hasData = v => v && (+userAvg(v) > 0 || v.fav || v.note);
@@ -488,7 +494,7 @@ wstart.onclick = async () => {
   rater = name;
   localStorage.setItem(LSR, rater);
   raterInput.value = rater;
-  await syncLoadRater(rater);
+  try { await syncLoadRater(rater); } catch (e) {}
   welcome.classList.add('hidden');
   wstart.textContent = 'מתחילים להאזין ✨';
   toast(`שלום ${rater}! הדירוגים שלך נשמרים אוטומטית`);
