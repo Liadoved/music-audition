@@ -261,22 +261,36 @@
   #astatus { font-size: 16.5px; font-weight: 700; color: var(--amber); min-height: 24px; }
   .akeys { color: var(--dim); font-size: 12px; }
   .aslider { display: flex; direction: ltr; align-items: center; gap: 12px; margin-top: 2px; }
-  .sdot { width: 16px; height: 16px; border-radius: 50%; flex: 0 0 16px; }
+  .sdot { width: 22px; height: 22px; border-radius: 50%; flex: 0 0 22px; }
   .sdot.l { background: var(--amber); box-shadow: 0 0 10px rgba(240,168,64,.5); }
   .sdot.r { background: #4dd0c4; box-shadow: 0 0 10px rgba(77,208,196,.5); }
-  .atrack { position: relative; width: min(400px, 68vw); height: 56px; border-radius: 30px;
+  .atrack { position: relative; width: min(560px, 82vw); height: 76px; border-radius: 40px;
             background: linear-gradient(90deg, rgba(240,168,64,.16), #171a1e 30%, #171a1e 70%, rgba(77,208,196,.16));
             border: 1px solid var(--line); touch-action: none; cursor: grab; }
   .athumb { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(180deg, #2a3037, #1d2126);
-            border: 2px solid #3a4148; display: flex; align-items: center; justify-content: center;
-            font-size: 20px; user-select: none; pointer-events: none; }
+            width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(180deg, #2f363e, #1d2126);
+            border: 3px solid #454e57; display: flex; align-items: center; justify-content: center;
+            font-size: 28px; user-select: none; pointer-events: none;
+            box-shadow: 0 4px 14px rgba(0,0,0,.5); }
   .athumb.snap { transition: left .28s cubic-bezier(.2,1.4,.4,1); }
   #arena.decide .athumb { animation: nudge 1.6s infinite; }
   @keyframes nudge { 25% { margin-left: -7px; } 75% { margin-left: 7px; } }
   @media (max-width: 700px) { .athumb { width: 54px; height: 54px; font-size: 23px; } .atrack { height: 62px; width: 78vw; } }
-  @media (max-width: 700px) { .aduel { flex-direction: column; align-items: center; }
-    .acard { width: 86vw; } .avs { width: 54px; height: 54px; font-size: 21px; flex-basis: auto; } }
+  @media (max-width: 700px) {
+    #arena { justify-content: flex-start; padding-top: 14px; gap: 9px; }
+    .aduel { gap: 6px; align-items: stretch; }
+    .acard { width: 42vw; padding: 12px 10px 12px; gap: 7px; border-radius: 14px; }
+    .aname { font-size: 14.5px; min-height: 40px; justify-content: center; }
+    .ainfo { font-size: 11px; }
+    .aside { font-size: 10px; padding: 1px 8px; }
+    .awin { font-size: 13.5px; padding: 11px 8px; }
+    .areplay { font-size: 12px; padding: 6px 8px; }
+    .avs { width: 38px; height: 38px; font-size: 15px; flex: 0 0 38px; align-self: center; }
+    .agenre { font-size: 22px; }
+    .aeq { height: 20px; }
+    .atrack { height: 84px; width: 74vw; }
+    .athumb { width: 72px; height: 72px; font-size: 31px; }
+  }
 </style>
 <div id="welcome" class="hidden">
   <div class="wbox">
@@ -764,6 +778,7 @@ function startBattle() {
     bar.style.transition = 'none'; bar.style.width = '0%';
   }
   resetSlider();
+  pickVoice();
   playSide(0, true);
 }
 
@@ -817,6 +832,20 @@ document.addEventListener('keydown', e => {
 });
 
 // ---- swipe slider: drag the circle toward the winner ----
+// a different real blesser voice for every battle
+const VOICES = ['speech/speech_test.mp3',
+  'speech/voices/voice_01.mp3','speech/voices/voice_02.mp3','speech/voices/voice_03.mp3',
+  'speech/voices/voice_04.mp3','speech/voices/voice_05.mp3','speech/voices/voice_06.mp3',
+  'speech/voices/voice_07.mp3','speech/voices/voice_08.mp3','speech/voices/voice_09.mp3',
+  'speech/voices/voice_10.mp3'];
+let lastVoice = 0;
+function pickVoice() {
+  let i;
+  do { i = Math.floor(Math.random() * VOICES.length); } while (i === lastVoice);
+  lastVoice = i;
+  speech.src = VOICES[i];
+}
+
 const atrack = $('#atrack'), athumb = $('#athumb');
 let sdrag = false, sfrac = 0;
 function setThumb(frac, snap) {
@@ -855,7 +884,7 @@ atrack.addEventListener('pointercancel', srelease);
 $('#battlebtn').onclick = () => { if (!rater) { showWelcome(); return; }
   $('#arena').classList.remove('hidden'); startBattle(); };
 $('#aexit').onclick = () => { clearBattleTimers(); music.pause(); speech.pause();
-  battle = null; $('#arena').classList.add('hidden'); };
+  battle = null; speech.src = VOICES[0]; lastVoice = 0; $('#arena').classList.add('hidden'); };
 $('#askip').onclick = startBattle;
 $('#aspeech').onclick = () => { $('#speechbtn').click(); $('#aspeech').classList.toggle('on', speechOn); };
 $('#acardL').querySelector('.areplay').onclick = () => playSide(0, false);
