@@ -136,6 +136,7 @@
     <input type="file" id="importfile" accept=".json" multiple style="display:none">
     <button class="btn admin" id="pullall" title="מושך מהענן את הדירוגים של כל המדרגים" style="display:none">🔄 משוך מכולם</button>
     <button class="btn admin" id="statsbtn" style="display:none">📊 מה מנצח</button>
+    <button class="btn" id="battlebtn" title="קרבות ראש בראש — הבחירות נרשמות ומשפיעות על הדירוג">⚔️ מוד קרבות</button>
     <button class="btn" id="top30">🏆 Top 30</button>
   </div>
 </header>
@@ -163,6 +164,54 @@
   #stats th, #stats td { padding: 5px 8px; text-align: center; border-bottom: 1px solid var(--line); }
   #stats th { color: var(--dim); font-weight: 600; }
 </style>
+<div id="arena" class="hidden">
+  <div class="abar">
+    <button class="btn" id="aexit">✕ חזרה לרשימה</button>
+    <span id="amood"></span>
+    <button class="btn" id="aspeech">🎤 מבחן דיבור</button>
+  </div>
+  <div class="aduel">
+    <div class="acard" id="acardL">
+      <div class="aname"></div><div class="ainfo"></div>
+      <div class="apulse">♪</div>
+      <button class="btn areplay">▶ שמע שוב</button>
+      <button class="awin">🏆 זה המנצח</button>
+    </div>
+    <div class="avs">⚔️</div>
+    <div class="acard" id="acardR">
+      <div class="aname"></div><div class="ainfo"></div>
+      <div class="apulse">♪</div>
+      <button class="btn areplay">▶ שמע שוב</button>
+      <button class="awin">🏆 זה המנצח</button>
+    </div>
+  </div>
+  <button class="btn" id="askip">↷ דלג לקרב הבא</button>
+  <p class="ahint">שני הצדדים מתנגנים אוטומטית 10 שניות כל אחד, משמאל לימין · הבחירה נרשמת ומשפיעה על הדירוג מאחורי הקלעים · קרב הוגן — אותו ז'אנר</p>
+</div>
+<style>
+  #arena { position: fixed; inset: 0; z-index: 95; background: rgba(12,14,16,.97);
+           display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 20px; }
+  .abar { display: flex; gap: 14px; align-items: center; }
+  #amood { background: var(--amber); color: var(--amber-text); border-radius: 20px; padding: 5px 16px; font-weight: 700; font-size: 14px; }
+  #aspeech.on { background: var(--amber); color: var(--amber-text); border-color: var(--amber); font-weight: 700; }
+  .aduel { display: flex; direction: ltr; gap: 26px; align-items: stretch; }
+  .acard { width: min(320px, 40vw); background: var(--panel); border: 2px solid var(--line); border-radius: 16px;
+           padding: 22px 20px; text-align: center; transition: border-color .25s, transform .25s, box-shadow .25s;
+           display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .acard.playing { border-color: var(--amber); box-shadow: 0 0 26px rgba(240,168,64,.25); transform: translateY(-4px); }
+  .acard.winner { border-color: var(--green); box-shadow: 0 0 30px rgba(88,201,140,.4); transform: scale(1.04); }
+  .aname { font-size: 19px; font-weight: 700; min-height: 48px; display: flex; align-items: center; }
+  .ainfo { color: var(--dim); font-size: 13px; min-height: 18px; }
+  .apulse { font-size: 26px; color: var(--line); }
+  .acard.playing .apulse { color: var(--amber); animation: apulse 1s infinite; }
+  @keyframes apulse { 50% { transform: scale(1.35); } }
+  .awin { background: var(--amber); color: var(--amber-text); border: none; border-radius: 10px;
+          padding: 12px 20px; font-size: 16px; font-weight: 800; cursor: pointer; width: 100%; }
+  .awin:hover { transform: scale(1.03); }
+  .avs { font-size: 34px; align-self: center; }
+  .ahint { color: var(--dim); font-size: 12.5px; max-width: 620px; text-align: center; margin: 0; }
+  @media (max-width: 700px) { .aduel { flex-direction: column; } .acard { width: 82vw; } }
+</style>
 <div id="welcome" class="hidden">
   <div class="wbox">
     <h2>👋 ברוכים הבאים לאודישן המוזיקה</h2>
@@ -183,6 +232,10 @@ const ADMIN = location.hostname === 'localhost' || location.search.includes('adm
 const LS2 = 'wewish_ratings_v2', LSR = 'wewish_rater', LSI = 'wewish_imported';
 let tracks = [], all = JSON.parse(localStorage.getItem(LS2) || '{}');
 let imported = JSON.parse(localStorage.getItem(LSI) || '{}');
+// battle-mode storage (tournament head-to-head results)
+const LSB = 'wewish_battles_v1', LSIB = 'wewish_imported_battles';
+let allBattles = JSON.parse(localStorage.getItem(LSB) || '{}');
+let importedBattles = JSON.parse(localStorage.getItem(LSIB) || '{}');
 let rater = (localStorage.getItem(LSR) || '').trim();
 // migrate v1 single-rater ratings (Liad's early session) once
 const v1 = JSON.parse(localStorage.getItem('wewish_music_ratings_v1') || 'null');
@@ -246,14 +299,16 @@ async function syncLoadRater(name) {
   localStorage.setItem('wewish_synckey', det);
   try {
     // gather every server copy of this rater: deterministic doc + legacy doc (old random key)
-    const sources = [];
+    const sources = [], bsrc = [];
     const d1 = await sGet('r-' + det).catch(() => null);
     if (d1 && d1.ratings) sources.push(d1.ratings);
+    if (d1 && d1.battles) bsrc.push(d1.battles);
     const idx0 = await sGet('index').catch(() => null);
     const legacy = idx0 && idx0.raters && idx0.raters[name];
     if (legacy && legacy !== det) {
       const d2 = await sGet('r-' + legacy).catch(() => null);
       if (d2 && d2.ratings) sources.push(d2.ratings);
+      if (d2 && d2.battles) bsrc.push(d2.battles);
     }
     // merge into local: never overwrite a local entry that has data
     const local = all[name] || (all[name] = {});
@@ -261,6 +316,13 @@ async function syncLoadRater(name) {
       for (const [id, v] of Object.entries(ratings))
         if (!hasData(local[id])) local[id] = v;
     localStorage.setItem(LS2, JSON.stringify(all));
+    // merge battles (dedupe by time+pair)
+    const localB = allBattles[name] || (allBattles[name] = []);
+    const seenB = new Set(localB.map(b => b.t + b.a + b.b));
+    for (const arr of bsrc)
+      for (const b of (arr || []))
+        if (!seenB.has(b.t + b.a + b.b)) { localB.push(b); seenB.add(b.t + b.a + b.b); }
+    localStorage.setItem(LSB, JSON.stringify(allBattles));
     // self-healing index entry: write + verify, up to 3 attempts
     for (let i = 0; i < 3; i++) {
       const cur = (await sGet('index').catch(() => null)) || { raters: {} };
@@ -282,8 +344,9 @@ function flushNow() {
   clearTimeout(pushTimer);
   const ratings = {};
   for (const [id, v] of Object.entries(mine())) if (hasData(v)) ratings[id] = v;
-  if (!Object.keys(ratings).length) return;
-  const payload = JSON.stringify({ rater, updated: new Date().toISOString(), ratings });
+  const battles = allBattles[rater] || [];
+  if (!Object.keys(ratings).length && !battles.length) return;
+  const payload = JSON.stringify({ rater, updated: new Date().toISOString(), ratings, battles });
   // text/plain keeps sendBeacon CORS-safelisted; the store keeps raw bytes either way
   navigator.sendBeacon(SYNC_BASE + SYNC_NS + '-r-' + myDocKey, new Blob([payload], { type: 'text/plain' }));
 }
@@ -298,7 +361,7 @@ function syncPushSoon() {
     try {
       const ratings = {};
       for (const [id, v] of Object.entries(mine())) if (hasData(v)) ratings[id] = v;
-      const r = await sPut('r-' + myDocKey, { rater, updated: new Date().toISOString(), ratings });
+      const r = await sPut('r-' + myDocKey, { rater, updated: new Date().toISOString(), ratings, battles: allBattles[rater] || [] });
       syncStat(r.ok ? '☁ נשמר ' + new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '⚠ מקומי בלבד');
     } catch (e) { syncStat('⚠ מקומי בלבד'); }
   }, 1200);
@@ -313,8 +376,10 @@ async function pullAll() {
       if (name === rater) continue;
       const doc = await sGet('r-' + key).catch(() => null);
       if (doc && doc.ratings) { imported[name] = doc.ratings; n++; }
+      if (doc && doc.battles) importedBattles[name] = doc.battles;
     }
     localStorage.setItem(LSI, JSON.stringify(imported));
+    localStorage.setItem(LSIB, JSON.stringify(importedBattles));
     syncStat('☁ מסונכרן');
     toast(`נמשכו דירוגים של ${n} מדרגים`);
     render();
@@ -436,6 +501,7 @@ function playTrack(id) {
   render();
 }
 music.addEventListener('ended', () => { // auto-advance within current filter
+  if (typeof battle !== 'undefined' && battle) return;
   const cards = $$('#grid .card'); const i = cards.findIndex(c => c.dataset.id === cur);
   if (i > -1 && i < cards.length - 1) playTrack(cards[i + 1].dataset.id);
 });
@@ -560,15 +626,125 @@ function renderStats() {
     <td>${i + 1}</td><td style="text-align:right">${r.t.name}</td><td>${r.t.mood_he}</td>
     <td><b>${r.overall.toFixed(1)}</b></td><td>${r.pro.toFixed(1)}</td><td>${r.pop.toFixed(1)}</td>
     <td>${r.msg.toFixed(1)}</td><td>${r.n}</td></tr>`).join('');
-  $('#statsbody').innerHTML = rows.length
+  const starHtml = rows.length
     ? `<div style="margin-bottom:12px">${wLine}</div>
        <table><tr><th>#</th><th style="text-align:right">שיר</th><th>סוג</th><th>ציון</th><th>מקצ׳</th><th>פופ׳</th><th>מסר</th><th>מדרגים</th></tr>${table}</table>`
-    : '<p style="color:var(--dim)">אין עדיין דירוגים — משוך מכולם קודם (🔄)</p>';
+    : '<p style="color:var(--dim)">אין עדיין דירוגי כוכבים — משוך מכולם קודם (🔄)</p>';
+  // tournament section: Elo from all battles, side by side with star averages
+  const elo = eloRanking();
+  const starOf = Object.fromEntries(rows.map(r => [r.t.id, r.overall]));
+  const byId = Object.fromEntries(tracks.map(t => [t.id, t]));
+  const eloRows = Object.entries(elo.R)
+    .map(([id, r]) => ({ t: byId[id], r, g: elo.G[id] || 0, w: elo.W[id] || 0 }))
+    .filter(x => x.t).sort((a, b) => b.r - a.r).slice(0, 40);
+  const eloTable = eloRows.map((x, i) => `<tr>
+    <td>${i + 1}</td><td style="text-align:right">${x.t.name}</td><td>${x.t.mood_he}</td>
+    <td><b>${Math.round(x.r)}</b></td><td>${x.w}-${x.g - x.w}</td>
+    <td>${starOf[x.t.id] ? starOf[x.t.id].toFixed(1) : '—'}</td></tr>`).join('');
+  const battleHtml = elo.total
+    ? `<h3 style="margin:22px 0 8px">⚔️ טורניר — דירוג Elo מ־${elo.total} קרבות</h3>
+       <table><tr><th>#</th><th style="text-align:right">שיר</th><th>סוג</th><th>Elo</th><th>נצ׳-הפ׳</th><th>ממוצע כוכבים</th></tr>${eloTable}</table>
+       <p style="color:var(--dim);font-size:12px;margin-top:8px">Elo מתחיל ב-1500; ניצחון על יריב חזק שווה יותר. השווה לעמודת הכוכבים כדי לראות איך שתי השיטות מתכתבות.</p>`
+    : '<p style="color:var(--dim);margin-top:18px">⚔️ אין עדיין קרבות — היכנסו למוד קרבות</p>';
+  $('#statsbody').innerHTML = starHtml + battleHtml;
 }
 $('#top30').onclick = () => {
   filt.fav = !filt.fav; $('.chip.fav').classList.toggle('on', filt.fav);
   filt.sort = 'rating'; $('#sort').value = 'rating'; render();
 };
+
+// ================= battle mode (tournament) =================
+const myBattles = () => allBattles[rater] || (allBattles[rater] = []);
+const saveBattles = () => { localStorage.setItem(LSB, JSON.stringify(allBattles)); counters(); syncPushSoon(); };
+let battle = null, battleTimers = [];
+const BDUR = 10000;
+const clearBattleTimers = () => { battleTimers.forEach(clearTimeout); battleTimers = []; };
+
+function pickBattle() {
+  const pools = {};
+  for (const t of tracks) (pools[t.mood] = pools[t.mood] || []).push(t);
+  const moods = Object.keys(pools).filter(m => pools[m].length >= 2);
+  const mood = moods[Math.floor(Math.random() * moods.length)];
+  const mineB = myBattles();
+  const cnt = id => mineB.reduce((n, b) => n + (b.a === id || b.b === id ? 1 : 0), 0);
+  const pool = pools[mood].map(t => ({ t, c: cnt(t.id), r: Math.random() }))
+    .sort((x, y) => x.c - y.c || x.r - y.r);
+  const a = pool[0].t;
+  const cands = pool.slice(1, 8).filter(x => x.t.id !== a.id);
+  const b = cands[Math.floor(Math.random() * cands.length)].t;
+  return Math.random() < 0.5 ? { a, b, mood } : { a: b, b: a, mood };
+}
+
+function startBattle() {
+  clearBattleTimers(); music.pause(); speech.pause();
+  battle = pickBattle();
+  $('#amood').textContent = 'קרב ' + (myBattles().length + 1) + ' · ' + battle.a.mood_he;
+  for (const [side, t] of [['L', battle.a], ['R', battle.b]]) {
+    const el = $('#acard' + side);
+    el.querySelector('.aname').textContent = t.name;
+    el.querySelector('.ainfo').textContent = t.lane_he || '';
+    el.classList.remove('winner', 'playing');
+  }
+  playSide(0, true);
+}
+
+function playSide(side, autoChain) {
+  clearBattleTimers();
+  const t = side === 0 ? battle.a : battle.b;
+  const off = Math.min(25, Math.round((t.dur_s || 60) * 0.25));
+  music.src = t.file.split('/').map(encodeURIComponent).join('/') + '#t=' + off;
+  music.volume = baseVol();
+  music.play().catch(() => {});
+  if (speechOn) { speech.currentTime = 0; speech.play().catch(() => {}); }
+  $('#acardL').classList.toggle('playing', side === 0);
+  $('#acardR').classList.toggle('playing', side === 1);
+  battleTimers.push(setTimeout(() => {
+    $('#acard' + (side === 0 ? 'L' : 'R')).classList.remove('playing');
+    if (side === 0 && autoChain) playSide(1, true);
+    else { music.pause(); speech.pause(); }
+  }, BDUR));
+}
+
+function recordBattle(winnerSide) {
+  if (!battle) return;
+  clearBattleTimers(); music.pause(); speech.pause();
+  const w = winnerSide === 0 ? battle.a : battle.b;
+  myBattles().push({ a: battle.a.id, b: battle.b.id, winner: w.id, mood: battle.mood, t: new Date().toISOString() });
+  saveBattles();
+  $('#acard' + (winnerSide === 0 ? 'L' : 'R')).classList.add('winner');
+  $('#acardL').classList.remove('playing'); $('#acardR').classList.remove('playing');
+  battleTimers.push(setTimeout(startBattle, 900));
+}
+
+$('#battlebtn').onclick = () => { if (!rater) { showWelcome(); return; }
+  $('#arena').classList.remove('hidden'); startBattle(); };
+$('#aexit').onclick = () => { clearBattleTimers(); music.pause(); speech.pause();
+  battle = null; $('#arena').classList.add('hidden'); };
+$('#askip').onclick = startBattle;
+$('#aspeech').onclick = () => { $('#speechbtn').click(); $('#aspeech').classList.toggle('on', speechOn); };
+$('#acardL').querySelector('.areplay').onclick = () => playSide(0, false);
+$('#acardR').querySelector('.areplay').onclick = () => playSide(1, false);
+$('#acardL').querySelector('.awin').onclick = () => recordBattle(0);
+$('#acardR').querySelector('.awin').onclick = () => recordBattle(1);
+
+// Elo over every battle from every rater (chronological)
+function eloRanking() {
+  const seq = [];
+  for (const arr of Object.values({ ...importedBattles, ...allBattles }))
+    for (const b of (arr || [])) if (b && b.a && b.b && b.winner) seq.push(b);
+  seq.sort((x, y) => (x.t || '').localeCompare(y.t || ''));
+  const R = {}, W = {}, G = {};
+  for (const b of seq) {
+    const ra = R[b.a] ?? 1500, rb = R[b.b] ?? 1500;
+    const ea = 1 / (1 + Math.pow(10, (rb - ra) / 400));
+    const sa = b.winner === b.a ? 1 : 0;
+    R[b.a] = ra + 32 * (sa - ea);
+    R[b.b] = rb + 32 * ((1 - sa) - (1 - ea));
+    G[b.a] = (G[b.a] || 0) + 1; G[b.b] = (G[b.b] || 0) + 1;
+    W[b.winner] = (W[b.winner] || 0) + 1;
+  }
+  return { R, W, G, total: seq.length };
+}
 
 fetch('tracks.json').then(r => r.json()).then(d => { tracks = d; render(); })
   .catch(() => { $('#grid').innerHTML = '<p style="color:var(--dim)">tracks.json חסר — הרץ את build_index.py</p>'; });
