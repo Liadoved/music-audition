@@ -196,7 +196,12 @@
     </div>
   </div>
   <div id="astatus"></div>
-  <div class="akeys">⬅ בוחר את השמאלי &nbsp;·&nbsp; ➡ בוחר את הימני</div>
+  <div class="aslider">
+    <i class="sdot l"></i>
+    <div class="atrack" id="atrack"><div class="athumb" id="athumb">⚔️</div></div>
+    <i class="sdot r"></i>
+  </div>
+  <div class="akeys">👆 גררו את העיגול לצד המנצח &nbsp;·&nbsp; ⬅➡ במקלדת &nbsp;·&nbsp; או הקישו 🏆</div>
   <button class="btn" id="askip">↷ דלג לקרב הבא</button>
 </div>
 <style>
@@ -255,6 +260,21 @@
          text-shadow: 0 0 18px rgba(240,168,64,.6); flex: 0 0 74px; }
   #astatus { font-size: 16.5px; font-weight: 700; color: var(--amber); min-height: 24px; }
   .akeys { color: var(--dim); font-size: 12px; }
+  .aslider { display: flex; direction: ltr; align-items: center; gap: 12px; margin-top: 2px; }
+  .sdot { width: 16px; height: 16px; border-radius: 50%; flex: 0 0 16px; }
+  .sdot.l { background: var(--amber); box-shadow: 0 0 10px rgba(240,168,64,.5); }
+  .sdot.r { background: #4dd0c4; box-shadow: 0 0 10px rgba(77,208,196,.5); }
+  .atrack { position: relative; width: min(400px, 68vw); height: 56px; border-radius: 30px;
+            background: linear-gradient(90deg, rgba(240,168,64,.16), #171a1e 30%, #171a1e 70%, rgba(77,208,196,.16));
+            border: 1px solid var(--line); touch-action: none; cursor: grab; }
+  .athumb { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(180deg, #2a3037, #1d2126);
+            border: 2px solid #3a4148; display: flex; align-items: center; justify-content: center;
+            font-size: 20px; user-select: none; pointer-events: none; }
+  .athumb.snap { transition: left .28s cubic-bezier(.2,1.4,.4,1); }
+  #arena.decide .athumb { animation: nudge 1.6s infinite; }
+  @keyframes nudge { 25% { margin-left: -7px; } 75% { margin-left: 7px; } }
+  @media (max-width: 700px) { .athumb { width: 54px; height: 54px; font-size: 23px; } .atrack { height: 62px; width: 78vw; } }
   @media (max-width: 700px) { .aduel { flex-direction: column; align-items: center; }
     .acard { width: 86vw; } .avs { width: 54px; height: 54px; font-size: 21px; flex-basis: auto; } }
 </style>
@@ -743,6 +763,7 @@ function startBattle() {
     const bar = el.querySelector('.abar2');
     bar.style.transition = 'none'; bar.style.width = '0%';
   }
+  resetSlider();
   playSide(0, true);
 }
 
@@ -794,6 +815,42 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowLeft') { e.preventDefault(); recordBattle(0); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); recordBattle(1); }
 });
+
+// ---- swipe slider: drag the circle toward the winner ----
+const atrack = $('#atrack'), athumb = $('#athumb');
+let sdrag = false, sfrac = 0;
+function setThumb(frac, snap) {
+  athumb.classList.toggle('snap', !!snap);
+  athumb.style.left = (50 + frac * 44) + '%';
+  const glow = Math.abs(frac) > 0.4;
+  athumb.style.boxShadow = glow
+    ? '0 0 24px ' + (frac < 0 ? 'rgba(240,168,64,.85)' : 'rgba(77,208,196,.85)') : '';
+  athumb.textContent = glow ? '🏆' : '⚔️';
+  $('#acardL').style.outline = frac < -0.4 ? '3px solid var(--amber)' : '';
+  $('#acardR').style.outline = frac > 0.4 ? '3px solid #4dd0c4' : '';
+}
+function resetSlider() { sfrac = 0; setThumb(0, true);
+  $('#acardL').style.outline = ''; $('#acardR').style.outline = ''; }
+function smove(e) {
+  if (!sdrag) return;
+  const r = atrack.getBoundingClientRect();
+  const half = r.width / 2;
+  sfrac = Math.max(-1, Math.min(1, ((e.clientX - r.left) - half) / (half - 30)));
+  setThumb(sfrac, false);
+}
+atrack.addEventListener('pointerdown', e => {
+  if (!battle || battle.done) return;
+  sdrag = true; try { atrack.setPointerCapture(e.pointerId); } catch (err) {} smove(e);
+});
+atrack.addEventListener('pointermove', smove);
+function srelease() {
+  if (!sdrag) return; sdrag = false;
+  if (sfrac <= -0.55) { setThumb(-1, true); recordBattle(0); }
+  else if (sfrac >= 0.55) { setThumb(1, true); recordBattle(1); }
+  else resetSlider();
+}
+atrack.addEventListener('pointerup', srelease);
+atrack.addEventListener('pointercancel', srelease);
 
 $('#battlebtn').onclick = () => { if (!rater) { showWelcome(); return; }
   $('#arena').classList.remove('hidden'); startBattle(); };
