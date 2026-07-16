@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>אודישן מוזיקה</title>
+<style>
+  :root {
+    --bg: #101214; --panel: #191d21; --panel2: #21262b; --line: #2c3238;
+    --text: #e8e6e1; --dim: #9aa3ab; --amber: #f0a840; --amber-text: #1a1206;
+    --green: #58c98c; --red: #e07a6a; --yellow: #e6c35c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 -apple-system, "Segoe UI", Rubik, Arial, sans-serif; padding-bottom: 110px; }
+  header { position: sticky; top: 0; z-index: 20; background: rgba(16,18,20,.94);
+           backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); padding: 14px 22px; }
+  h1 { margin: 0 0 4px; font-size: 20px; }
+  h1 small { color: var(--dim); font-weight: 400; font-size: 13px; margin-inline-start: 10px; }
+  .counters { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--dim); }
+  .counters b { color: var(--amber); }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+  .chip { border: 1px solid var(--line); background: var(--panel); color: var(--dim);
+          border-radius: 20px; padding: 4px 13px; cursor: pointer; font-size: 13px; user-select: none; }
+  .chip.on { background: var(--amber); color: var(--amber-text); border-color: var(--amber); font-weight: 600; }
+  select, input[type=search] { background: var(--panel); color: var(--text); border: 1px solid var(--line);
+          border-radius: 8px; padding: 5px 10px; font-size: 13px; }
+  .btn { background: var(--panel2); border: 1px solid var(--line); color: var(--text);
+         border-radius: 8px; padding: 5px 12px; cursor: pointer; font-size: 13px; }
+  .btn:hover { border-color: var(--amber); }
+  main { max-width: 1180px; margin: 18px auto; padding: 0 22px;
+         display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .card.playing { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber); }
+  .row1 { display: flex; align-items: center; gap: 10px; }
+  .play { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); flex: 0 0 38px;
+          background: var(--panel2); color: var(--text); font-size: 15px; cursor: pointer; }
+  .play:hover { border-color: var(--amber); color: var(--amber); }
+  .tname { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .badges { display: flex; gap: 5px; flex-wrap: wrap; margin: 8px 0 6px; }
+  .b { font-size: 11px; border-radius: 5px; padding: 1px 7px; background: var(--panel2); color: var(--dim); }
+  .b.new { background: #2c3a2f; color: var(--green); }
+  .b.old { background: #33302a; color: var(--yellow); }
+  .metrics { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+  .m { font-size: 11px; border-radius: 5px; padding: 1px 7px; border: 1px solid var(--line); color: var(--dim); }
+  .m.g { color: var(--green); border-color: #2c5a41; }
+  .m.y { color: var(--yellow); border-color: #5a512c; }
+  .m.r { color: var(--red); border-color: #5a382c; }
+  .crow { font-size: 12.5px; color: var(--dim); margin: 2px 0 6px; line-height: 1.45; }
+  .cstars { color: var(--amber); letter-spacing: 1px; }
+  .cnote { color: var(--dim); }
+  .cparams { display: flex; gap: 5px; margin: 0 0 8px; flex-wrap: wrap; }
+  .cparams .m { font-size: 11px; }
+  .params { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: center; margin-bottom: 4px; }
+  .plabel { font-size: 12px; color: var(--dim); }
+  .pstars { display: flex; gap: 0; direction: rtl; justify-content: flex-start; }
+  .pstars .star { font-size: 14.5px; }
+  .aggchip { font-size: 11.5px; border-radius: 5px; padding: 1px 8px; background: #2a3340;
+             color: #7fb5e6; display: inline-block; margin-bottom: 6px; }
+  #rater { width: 110px; background: var(--panel); color: var(--amber); border: 1px solid var(--line);
+           border-radius: 8px; padding: 5px 10px; font-size: 13px; font-weight: 600; }
+  .row3 { display: flex; align-items: center; gap: 10px; }
+  .stars { display: flex; gap: 2px; direction: ltr; }
+  .star { font-size: 21px; color: #3a4148; cursor: pointer; transition: color .1s; }
+  .star.on { color: var(--amber); }
+  .heart { font-size: 19px; cursor: pointer; color: #3a4148; margin-inline-start: auto; }
+  .heart.on { color: var(--red); }
+  .note { width: 100%; margin-top: 8px; background: var(--panel2); border: 1px solid var(--line);
+          color: var(--text); border-radius: 7px; padding: 4px 9px; font-size: 12.5px; }
+  #playerbar { position: fixed; bottom: 0; right: 0; left: 0; z-index: 30; background: #15181b;
+               border-top: 1px solid var(--line); padding: 10px 22px; display: flex; gap: 14px; align-items: center; }
+  #nowname { font-weight: 600; min-width: 150px; max-width: 260px; overflow: hidden;
+             text-overflow: ellipsis; white-space: nowrap; }
+  #seek { flex: 1; }
+  input[type=range] { accent-color: var(--amber); }
+  #speechbtn.on { background: var(--amber); color: var(--amber-text); border-color: var(--amber); font-weight: 700; }
+  .vol { width: 90px; }
+  #toast { position: fixed; bottom: 120px; right: 50%; transform: translateX(50%); background: var(--amber);
+           color: var(--amber-text); font-weight: 600; border-radius: 10px; padding: 8px 18px; display: none; z-index: 40; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎵 אודישן מוזיקה <small>מדרגים כל שיר בשלושה פרמטרים</small></h1>
+  <div class="counters">
+    <span>דורגו: <b id="c-rated">0</b></span>
+    <span>בשורטליסט: <b id="c-short">0</b>/30</span>
+    <span>שמח: <b id="c-happy">0</b></span>
+    <span>מצחיק: <b id="c-funny">0</b></span>
+    <span>מרגש: <b id="c-emotional">0</b></span>
+  </div>
+  <div class="toolbar">
+    <span class="chip src on" data-v="">הכל</span>
+    <span class="chip src" data-v="old">ישן</span>
+    <span class="chip src" data-v="new">חדש</span>
+    <span style="color:var(--line)">|</span>
+    <span class="chip mood on" data-v="">כל הסוגים</span>
+    <span class="chip mood" data-v="happy">שמח</span>
+    <span class="chip mood" data-v="funny">מצחיק</span>
+    <span class="chip mood" data-v="emotional">מרגש</span>
+    <span class="chip mood" data-v="oc">פתיח/סגיר</span>
+    <span style="color:var(--line)">|</span>
+    <span class="chip lane on" data-v="">כל השפות</span>
+    <span class="chip lane" data-v="med">ים־תיכוני</span>
+    <span class="chip lane" data-v="sabra">צבר</span>
+    <span class="chip fav" data-v="">❤ שורטליסט</span>
+    <select id="sort">
+      <option value="default">מיון: ברירת מחדל</option>
+      <option value="score">לפי ציון אוטומטי</option>
+      <option value="claude">לפי הדירוג של Claude</option>
+      <option value="rating">לפי הדירוג שלי</option>
+      <option value="group">לפי שקלול קבוצתי</option>
+      <option value="speech">פנוי לדיבור (הכי נקי)</option>
+      <option value="busy">הכי רגוע (תווים/שנ׳)</option>
+      <option value="dur">אורך</option>
+    </select>
+    <input type="search" id="q" placeholder="חיפוש...">
+    <input id="rater" title="שם המדרג — הדירוגים נשמרים לכל מדרג בנפרד" placeholder="שם המדרג">
+    <button class="btn" id="export">⬇ ייצוא דירוגים</button>
+    <button class="btn" id="import" title="טען קבצי דירוגים של מדרגים אחרים לשקלול">⬆ ייבוא לשקלול</button>
+    <input type="file" id="importfile" accept=".json" multiple style="display:none">
+    <button class="btn" id="top30">🏆 Top 30</button>
+  </div>
+</header>
+<main id="grid"></main>
+<div id="playerbar">
+  <button class="play" id="pp">▶</button>
+  <div id="nowname">—</div>
+  <input type="range" id="seek" min="0" max="1000" value="0">
+  <span id="time" style="color:var(--dim);font-size:12px;min-width:78px;text-align:center">0:00 / 0:00</span>
+  <button class="btn" id="speechbtn" title="מנגן ברכה אמיתית מעל המוזיקה, כמו בסרט">🎤 מבחן דיבור</button>
+  <input type="range" class="vol" id="vol" min="0" max="100" value="90" title="עוצמת מוזיקה">
+</div>
+<div id="toast"></div>
+<audio id="music" preload="none"></audio>
+<audio id="speech" src="speech/speech_test.mp3" preload="auto" loop></audio>
+<script>
+const LS2 = 'wewish_ratings_v2', LSR = 'wewish_rater', LSI = 'wewish_imported';
+let tracks = [], all = JSON.parse(localStorage.getItem(LS2) || '{}');
+let imported = JSON.parse(localStorage.getItem(LSI) || '{}');
+let rater = localStorage.getItem(LSR) || 'ליעד';
+// migrate v1 single-rater ratings into the current rater once
+const v1 = JSON.parse(localStorage.getItem('wewish_music_ratings_v1') || 'null');
+if (v1 && !all[rater]) {
+  all[rater] = {};
+  for (const [id, v] of Object.entries(v1))
+    all[rater][id] = { pro: v.r || 0, pop: v.r || 0, msg: v.r || 0, fav: !!v.fav, note: v.note || '' };
+  localStorage.setItem(LS2, JSON.stringify(all));
+}
+let filt = { src: '', mood: '', lane: '', fav: false, q: '', sort: 'default' };
+let cur = null, speechOn = false;
+const music = document.getElementById('music'), speech = document.getElementById('speech');
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+
+// one-time migration: earlier ratings were on a 1-5 scale, now 1-10
+if (!localStorage.getItem('wewish_scale10')) {
+  for (const store of [all, imported])
+    for (const ratings of Object.values(store))
+      for (const v of Object.values(ratings))
+        for (const k of ['pro', 'pop', 'msg'])
+          if (v[k] > 0 && v[k] <= 5) v[k] = v[k] * 2;
+  localStorage.setItem(LS2, JSON.stringify(all));
+  localStorage.setItem(LSI, JSON.stringify(imported));
+  localStorage.setItem('wewish_scale10', '1');
+}
+const claude10 = t => ((t.claude.pro + t.claude.pop + t.claude.msg) / 3 * 2).toFixed(1);
+const mine = () => all[rater] || (all[rater] = {});
+const st = id => mine()[id] || (mine()[id] = { pro: 0, pop: 0, msg: 0, fav: false, note: '' });
+const save = () => { localStorage.setItem(LS2, JSON.stringify(all)); localStorage.setItem(LSR, rater); counters(); };
+const userAvg = v => { const p = [v.pro, v.pop, v.msg].filter(x => x > 0);
+  return p.length ? (p.reduce((a, b) => a + b) / p.length).toFixed(1) : 0; };
+
+function aggData(id) { // weighted mean across all raters (local + imported)
+  const sets = { ...imported, ...all };
+  let sum = 0, n = 0;
+  for (const ratings of Object.values(sets)) {
+    const v = ratings[id]; if (!v) continue;
+    const a = +userAvg(v); if (a > 0) { sum += a; n++; }
+  }
+  return n ? { avg: (sum / n).toFixed(1), n } : null;
+}
+function aggChip(t) {
+  // shown only after the current rater rated all three params, so the group
+  // average can't bias an unfinished rating
+  const my = mine()[t.id];
+  if (!my || !(my.pro > 0 && my.pop > 0 && my.msg > 0)) return '';
+  const g = aggData(t.id);
+  return g ? `<span class="aggchip" title="שקלול כל המדרגים — נחשף אחרי שסיימת לדרג">👥 שקלול: ${g.avg} · ${g.n} מדרגים</span>` : '';
+}
+
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 1800); }
+
+function counters() {
+  const rated = tracks.filter(t => +userAvg(st(t.id)) > 0).length;
+  const favs = tracks.filter(t => st(t.id).fav);
+  $('#c-rated').textContent = rated;
+  $('#c-short').textContent = favs.length;
+  for (const m of ['happy', 'funny', 'emotional'])
+    $('#c-' + m).textContent = favs.filter(t => t.mood === m).length;
+}
+
+function mchip(label, val, cls) { return `<span class="m ${cls}" title="${label}">${label}: ${val}</span>`; }
+function metricChips(t) {
+  const sp = t.speech_band_pct, on = t.onsets_per_s, lra = t.lra, d = t.dur_s;
+  const spc = sp <= 35 ? 'g' : sp <= 45 ? 'y' : 'r';
+  const onc = on <= 3.5 ? 'g' : on <= 4.3 ? 'y' : 'r';
+  const lc = lra <= 6.5 ? 'g' : lra <= 9 ? 'y' : 'r';
+  const dc = d >= 110 ? 'g' : d >= 55 ? 'y' : 'r';
+  const tot = Math.round(d), mm = Math.floor(tot / 60), ss = String(tot % 60).padStart(2, '0');
+  const sc = t.score ?? 0, scc = sc >= 75 ? 'g' : sc >= 55 ? 'y' : 'r';
+  return mchip('ציון', sc, scc) + mchip('פנוי לדיבור', sp + '%', spc) + mchip('צפיפות', on + '/שנ׳', onc)
+       + mchip('דינמיקה', lra + ' LU', lc) + mchip('אורך', mm + ':' + ss, dc);
+}
+
+function render() {
+  let list = tracks.filter(t =>
+    (!filt.src || t.source === filt.src) &&
+    (!filt.mood || (filt.mood === 'oc' ? (t.mood === 'opener' || t.mood === 'closer') : t.mood === filt.mood)) &&
+    (!filt.lane || t.lane === filt.lane) &&
+    (!filt.fav || st(t.id).fav) &&
+    (!filt.q || t.name.includes(filt.q)));
+  const s = filt.sort;
+  if (s === 'score') list.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  else if (s === 'claude') list.sort((a, b) => (+claude10(b) - +claude10(a)) || ((b.score ?? 0) - (a.score ?? 0)));
+  else if (s === 'rating') list.sort((a, b) => +userAvg(st(b.id)) - +userAvg(st(a.id)));
+  else if (s === 'group') list.sort((a, b) => (+(aggData(b.id)?.avg ?? 0)) - (+(aggData(a.id)?.avg ?? 0)));
+  else if (s === 'speech') list.sort((a, b) => a.speech_band_pct - b.speech_band_pct);
+  else if (s === 'busy') list.sort((a, b) => a.onsets_per_s - b.onsets_per_s);
+  else if (s === 'dur') list.sort((a, b) => b.dur_s - a.dur_s);
+  $('#grid').innerHTML = list.map(t => {
+    const v = st(t.id);
+    return `<div class="card ${cur === t.id ? 'playing' : ''}" data-id="${t.id}">
+      <div class="row1">
+        <button class="play" data-act="play">${cur === t.id && !music.paused ? '⏸' : '▶'}</button>
+        <div style="min-width:0">
+          <div class="tname">${t.name}</div>
+          <div class="badges">
+            <span class="b ${t.source}">${t.source === 'old' ? 'ישן' : 'חדש'}</span>
+            <span class="b">${t.mood_he}</span>
+            ${t.lane_he ? `<span class="b">${t.lane_he}</span>` : ''}
+          </div>
+        </div>
+      </div>
+      <div class="metrics">${metricChips(t)}</div>
+      ${t.claude ? `<div class="crow" title="הדירוג של Claude (סולם 1-10)">🤖 <span class="cstars">${claude10(t)}/10</span> <span class="cnote">${t.claude.note}</span></div>
+      <div class="cparams">${t.claude.pro !== undefined ? `<span class="m">מקצועיות: ${t.claude.pro * 2}</span><span class="m">פופולריות: ${t.claude.pop * 2}</span><span class="m">מסר: ${t.claude.msg * 2}</span>` : ''}${aggChip(t)}</div>` : ''}
+      <div class="params">${[['pro','מקצועיות'],['pop','פופולריות'],['msg','מסר']].map(([k, lbl]) =>
+        `<span class="plabel">${lbl}</span><div class="pstars" data-param="${k}">${[1,2,3,4,5,6,7,8,9,10].map(i =>
+          `<span class="star ${(v[k] || 0) >= i ? 'on' : ''}" data-i="${i}">★</span>`).join('')}</div>`).join('')}</div>
+      <div class="row3">
+        <span class="plabel">ממוצע שלי: <b style="color:var(--amber)">${userAvg(v) || '—'}</b></span>
+        <span class="heart ${v.fav ? 'on' : ''}" data-act="fav">❤</span>
+      </div>
+      <input class="note" data-act="note" placeholder="הערה..." value="${(v.note || '').replace(/"/g, '&quot;')}">
+    </div>`; }).join('');
+  counters();
+}
+
+$('#grid').addEventListener('click', e => {
+  const card = e.target.closest('.card'); if (!card) return;
+  const id = card.dataset.id, act = e.target.closest('[data-act]')?.dataset.act;
+  if (act === 'play') { cur === id && !music.paused ? music.pause() : playTrack(id); }
+  else if (act === 'fav') { st(id).fav = !st(id).fav; save(); render(); }
+  else if (e.target.classList.contains('star')) {
+    const param = e.target.closest('.pstars')?.dataset.param;
+    if (param) { const v = st(id), i = +e.target.dataset.i;
+      v[param] = (v[param] === i) ? 0 : i; save(); render(); }
+  }
+});
+$('#grid').addEventListener('change', e => {
+  if (e.target.classList.contains('note')) { st(e.target.closest('.card').dataset.id).note = e.target.value; save(); }
+});
+
+function playTrack(id) {
+  const t = tracks.find(x => x.id === id); if (!t) return;
+  cur = id;
+  music.src = t.file.split('/').map(encodeURIComponent).join('/');
+  music.play();
+  $('#nowname').textContent = t.name;
+  if (speechOn) { speech.currentTime = 0; speech.play(); }
+  render();
+}
+music.addEventListener('ended', () => { // auto-advance within current filter
+  const cards = $$('#grid .card'); const i = cards.findIndex(c => c.dataset.id === cur);
+  if (i > -1 && i < cards.length - 1) playTrack(cards[i + 1].dataset.id);
+});
+function updatePP() { $('#pp').textContent = music.paused ? '▶' : '⏸'; }
+music.addEventListener('play', () => { updatePP(); render(); });
+music.addEventListener('pause', () => { updatePP(); render(); });
+music.addEventListener('timeupdate', () => {
+  if (music.duration) $('#seek').value = music.currentTime / music.duration * 1000;
+  const f = s => isFinite(s) ? Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0') : '0:00';
+  $('#time').textContent = f(music.currentTime) + ' / ' + f(music.duration);
+});
+$('#seek').oninput = e => { if (music.duration) music.currentTime = e.target.value / 1000 * music.duration; };
+$('#pp').onclick = () => music.paused ? music.play() : music.pause();
+$('#vol').oninput = e => music.volume = baseVol();
+function baseVol() { return ($('#vol').value / 100) * (speechOn ? 0.28 : 1); }
+
+$('#speechbtn').onclick = () => {
+  speechOn = !speechOn;
+  $('#speechbtn').classList.toggle('on', speechOn);
+  music.volume = baseVol();
+  if (speechOn && cur && !music.paused) { speech.currentTime = 0; speech.play(); }
+  else speech.pause();
+  toast(speechOn ? 'מבחן דיבור: המוזיקה הונמכה כמו בסרט' : 'מבחן דיבור כובה');
+};
+music.addEventListener('pause', () => speech.pause());
+music.addEventListener('play', () => { music.volume = baseVol(); if (speechOn) speech.play(); });
+
+$$('.chip.src').forEach(c => c.onclick = () => { filt.src = c.dataset.v;
+  $$('.chip.src').forEach(x => x.classList.toggle('on', x === c)); render(); });
+$$('.chip.mood').forEach(c => c.onclick = () => { filt.mood = c.dataset.v;
+  $$('.chip.mood').forEach(x => x.classList.toggle('on', x === c)); render(); });
+$$('.chip.lane').forEach(c => c.onclick = () => { filt.lane = c.dataset.v;
+  $$('.chip.lane').forEach(x => x.classList.toggle('on', x === c)); render(); });
+$('.chip.fav').onclick = e => { filt.fav = !filt.fav; e.target.classList.toggle('on', filt.fav); render(); };
+$('#sort').onchange = e => { filt.sort = e.target.value; render(); };
+$('#q').oninput = e => { filt.q = e.target.value.trim(); render(); };
+
+$('#export').onclick = () => {
+  const ratings = {};
+  for (const [id, v] of Object.entries(mine()))
+    if (+userAvg(v) > 0 || v.fav || v.note) ratings[id] = v;
+  const blob = new Blob([JSON.stringify({ rater, ratings }, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `wewish_ratings_${rater}.json`; a.click();
+  toast(`הדירוגים של ${rater} יוצאו לקובץ`);
+};
+$('#import').onclick = () => $('#importfile').click();
+$('#importfile').onchange = async e => {
+  let loaded = 0;
+  for (const f of e.target.files) {
+    try {
+      const d = JSON.parse(await f.text());
+      if (d.rater && d.ratings) { imported[d.rater] = d.ratings; loaded++; }
+    } catch {}
+  }
+  localStorage.setItem(LSI, JSON.stringify(imported));
+  toast(`נטענו ${loaded} קבצי מדרגים — השקלול מעודכן`);
+  render();
+};
+const raterInput = $('#rater');
+raterInput.value = rater;
+raterInput.onchange = () => {
+  rater = raterInput.value.trim() || 'ליעד';
+  localStorage.setItem(LSR, rater);
+  toast(`מדרג נוכחי: ${rater}`);
+  render();
+};
+$('#top30').onclick = () => {
+  filt.fav = !filt.fav; $('.chip.fav').classList.toggle('on', filt.fav);
+  filt.sort = 'rating'; $('#sort').value = 'rating'; render();
+};
+
+fetch('tracks.json').then(r => r.json()).then(d => { tracks = d; render(); })
+  .catch(() => { $('#grid').innerHTML = '<p style="color:var(--dim)">tracks.json חסר — הרץ את build_index.py</p>'; });
+</script>
+</body>
+</html>
