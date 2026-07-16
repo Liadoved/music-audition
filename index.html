@@ -129,9 +129,12 @@
     </select>
     <input type="search" id="q" placeholder="חיפוש...">
     <input id="rater" title="שם המדרג — הדירוגים נשמרים לכל מדרג בנפרד" placeholder="שם המדרג">
+    <span id="syncstat" style="font-size:12px;color:var(--dim);min-width:86px"></span>
     <button class="btn" id="export">⬇ ייצוא דירוגים</button>
-    <button class="btn" id="import" title="טען קבצי דירוגים של מדרגים אחרים לשקלול">⬆ ייבוא לשקלול</button>
+    <button class="btn admin" id="import" title="טען קבצי דירוגים של מדרגים אחרים לשקלול" style="display:none">⬆ ייבוא מקובץ</button>
     <input type="file" id="importfile" accept=".json" multiple style="display:none">
+    <button class="btn admin" id="pullall" title="מושך מהענן את הדירוגים של כל המדרגים" style="display:none">🔄 משוך מכולם</button>
+    <button class="btn admin" id="statsbtn" style="display:none">📊 מה מנצח</button>
     <button class="btn" id="top30">🏆 Top 30</button>
   </div>
 </header>
@@ -145,6 +148,20 @@
   <input type="range" class="vol" id="vol" min="0" max="100" value="90" title="עוצמת מוזיקה">
 </div>
 <div id="toast"></div>
+<div id="stats" class="hidden" style="position:fixed;inset:0;z-index:90;background:rgba(10,12,14,.88);backdrop-filter:blur(6px);overflow:auto;padding:40px 20px">
+  <div style="max-width:860px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 26px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h2 style="margin:0;font-size:19px">📊 מה מנצח — שקלול כל המדרגים</h2>
+      <button class="btn" id="statsclose">✕ סגור</button>
+    </div>
+    <div id="statsbody"></div>
+  </div>
+</div>
+<style>
+  #stats table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  #stats th, #stats td { padding: 5px 8px; text-align: center; border-bottom: 1px solid var(--line); }
+  #stats th { color: var(--dim); font-weight: 600; }
+</style>
 <div id="welcome" class="hidden">
   <div class="wbox">
     <h2>👋 ברוכים הבאים לאודישן המוזיקה</h2>
@@ -156,6 +173,12 @@
 <audio id="music" preload="none"></audio>
 <audio id="speech" src="speech/speech_test.mp3" preload="auto" loop></audio>
 <script>
+// ---- central cloud store (textdb.dev, key per rater) ----
+const SYNC_BASE = 'https://textdb.dev/api/data/';
+const SYNC_NS = 'maud-ba1e5b83';
+// admin tools (pull-all, stats) only for the owner's views
+const ADMIN = location.hostname === 'localhost' || location.search.includes('admin');
+
 const LS2 = 'wewish_ratings_v2', LSR = 'wewish_rater', LSI = 'wewish_imported';
 let tracks = [], all = JSON.parse(localStorage.getItem(LS2) || '{}');
 let imported = JSON.parse(localStorage.getItem(LSI) || '{}');
@@ -188,7 +211,78 @@ const claude10 = t => ((t.claude.pro + t.claude.pop + t.claude.msg) / 3 * 2).toF
 const EMPTY_R = Object.freeze({ pro: 0, pop: 0, msg: 0, fav: false, note: '' });
 const mine = () => all[rater] || (all[rater] = {});
 const st = id => rater ? (mine()[id] || (mine()[id] = { pro: 0, pop: 0, msg: 0, fav: false, note: '' })) : { ...EMPTY_R };
-const save = () => { localStorage.setItem(LS2, JSON.stringify(all)); localStorage.setItem(LSR, rater); counters(); };
+const save = () => { localStorage.setItem(LS2, JSON.stringify(all)); localStorage.setItem(LSR, rater); counters(); syncPushSoon(); };
+
+// ---- cloud sync ----
+let myDocKey = localStorage.getItem('wewish_synckey') || '';
+let pushTimer = null;
+const syncStat = msg => { const el = $('#syncstat'); if (el) el.textContent = msg; };
+const sGet = async key => {
+  const r = await fetch(SYNC_BASE + SYNC_NS + '-' + key, { cache: 'no-store' });
+  if (!r.ok) throw new Error('http ' + r.status);
+  const txt = await r.text();
+  return txt ? JSON.parse(txt) : null;
+};
+const sPut = (key, obj) => fetch(SYNC_BASE + SYNC_NS + '-' + key, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
+
+const hasData = v => v && (+userAvg(v) > 0 || v.fav || v.note);
+
+async function syncLoadRater(name) {
+  syncStat('☁ טוען…');
+  try {
+    const idx = (await sGet('index').catch(() => null)) || { raters: {} };
+    let key = idx.raters[name];
+    if (!key) { // new rater: register in the index
+      key = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)).replace(/-/g, '').slice(0, 10);
+      idx.raters[name] = key;
+      await sPut('index', idx);
+    } else { // returning rater: adopt server ratings where local is empty
+      const doc = await sGet('r-' + key).catch(() => null);
+      if (doc && doc.ratings) {
+        const local = all[name] || (all[name] = {});
+        for (const [id, v] of Object.entries(doc.ratings))
+          if (!hasData(local[id])) local[id] = v;
+        localStorage.setItem(LS2, JSON.stringify(all));
+      }
+    }
+    myDocKey = key;
+    localStorage.setItem('wewish_synckey', key);
+    syncStat('☁ מסונכרן');
+    syncPushSoon();
+  } catch (e) { syncStat('⚠ מקומי בלבד'); }
+}
+
+function syncPushSoon() {
+  if (!rater || !myDocKey) return;
+  clearTimeout(pushTimer);
+  syncStat('☁ שומר…');
+  pushTimer = setTimeout(async () => {
+    try {
+      const ratings = {};
+      for (const [id, v] of Object.entries(mine())) if (hasData(v)) ratings[id] = v;
+      const r = await sPut('r-' + myDocKey, { rater, updated: new Date().toISOString(), ratings });
+      syncStat(r.ok ? '☁ נשמר ' + new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '⚠ מקומי בלבד');
+    } catch (e) { syncStat('⚠ מקומי בלבד'); }
+  }, 1200);
+}
+
+async function pullAll() {
+  syncStat('☁ מושך את כולם…');
+  try {
+    const idx = await sGet('index');
+    let n = 0;
+    for (const [name, key] of Object.entries(idx.raters || {})) {
+      if (name === rater) continue;
+      const doc = await sGet('r-' + key).catch(() => null);
+      if (doc && doc.ratings) { imported[name] = doc.ratings; n++; }
+    }
+    localStorage.setItem(LSI, JSON.stringify(imported));
+    syncStat('☁ מסונכרן');
+    toast(`נמשכו דירוגים של ${n} מדרגים`);
+    render();
+  } catch (e) { syncStat('⚠ שגיאת משיכה'); toast('המשיכה נכשלה — נסה שוב'); }
+}
 const userAvg = v => { const p = [v.pro, v.pop, v.msg].filter(x => x > 0);
   return p.length ? (p.reduce((a, b) => a + b) / p.length).toFixed(1) : 0; };
 
@@ -366,11 +460,13 @@ $('#importfile').onchange = async e => {
 };
 const raterInput = $('#rater');
 raterInput.value = rater;
-raterInput.onchange = () => {
+raterInput.onchange = async () => {
   const v = raterInput.value.trim();
-  if (!v) { rater = ''; localStorage.removeItem(LSR); showWelcome(); return; }
-  rater = v;
+  if (!v) { rater = ''; myDocKey = ''; localStorage.removeItem(LSR); localStorage.removeItem('wewish_synckey'); showWelcome(); return; }
+  rater = v; myDocKey = '';
   localStorage.setItem(LSR, rater);
+  localStorage.removeItem('wewish_synckey');
+  await syncLoadRater(rater);
   toast(`מדרג נוכחי: ${rater}`);
   render();
 };
@@ -385,16 +481,53 @@ function showWelcome() {
 }
 wname.oninput = () => { wstart.disabled = !wname.value.trim(); };
 wname.onkeydown = e => { if (e.key === 'Enter' && wname.value.trim()) wstart.click(); };
-wstart.onclick = () => {
-  rater = wname.value.trim();
-  if (!rater) return;
+wstart.onclick = async () => {
+  const name = wname.value.trim();
+  if (!name) return;
+  wstart.disabled = true; wstart.textContent = 'רק רגע, טוען את הדירוגים שלך…';
+  rater = name;
   localStorage.setItem(LSR, rater);
   raterInput.value = rater;
+  await syncLoadRater(rater);
   welcome.classList.add('hidden');
-  toast(`שלום ${rater}! אפשר להתחיל לדרג`);
+  wstart.textContent = 'מתחילים להאזין ✨';
+  toast(`שלום ${rater}! הדירוגים שלך נשמרים אוטומטית`);
   render();
 };
-if (!rater) showWelcome();
+if (!rater) showWelcome(); else syncLoadRater(rater);
+
+// admin tools (Liad): pull everyone + stats
+if (ADMIN) $$('.btn.admin').forEach(b => b.style.display = '');
+$('#pullall').onclick = pullAll;
+$('#statsbtn').onclick = () => { $('#stats').classList.remove('hidden'); renderStats(); };
+$('#statsclose').onclick = () => $('#stats').classList.add('hidden');
+
+function renderStats() {
+  const rows = tracks.map(t => {
+    const sets = { ...imported, ...all };
+    const per = { pro: [], pop: [], msg: [] }; let n = 0;
+    for (const ratings of Object.values(sets)) {
+      const v = ratings[t.id]; if (!v || !(+userAvg(v) > 0)) continue;
+      n++;
+      for (const k of ['pro', 'pop', 'msg']) if (v[k] > 0) per[k].push(v[k]);
+    }
+    const avg = arr => arr.length ? arr.reduce((a, b) => a + b) / arr.length : 0;
+    const overall = avg([...per.pro, ...per.pop, ...per.msg]);
+    return { t, n, overall, pro: avg(per.pro), pop: avg(per.pop), msg: avg(per.msg) };
+  }).filter(r => r.n > 0).sort((a, b) => b.overall - a.overall);
+  const winners = {};
+  for (const r of rows) { const m = r.t.mood; if (!winners[m]) winners[m] = r; }
+  const wLine = Object.values(winners).map(r =>
+    `<span class="b" style="margin-inline-end:6px">🏆 ${r.t.mood_he}: <b>${r.t.name}</b> (${r.overall.toFixed(1)})</span>`).join('');
+  const table = rows.slice(0, 40).map((r, i) => `<tr>
+    <td>${i + 1}</td><td style="text-align:right">${r.t.name}</td><td>${r.t.mood_he}</td>
+    <td><b>${r.overall.toFixed(1)}</b></td><td>${r.pro.toFixed(1)}</td><td>${r.pop.toFixed(1)}</td>
+    <td>${r.msg.toFixed(1)}</td><td>${r.n}</td></tr>`).join('');
+  $('#statsbody').innerHTML = rows.length
+    ? `<div style="margin-bottom:12px">${wLine}</div>
+       <table><tr><th>#</th><th style="text-align:right">שיר</th><th>סוג</th><th>ציון</th><th>מקצ׳</th><th>פופ׳</th><th>מסר</th><th>מדרגים</th></tr>${table}</table>`
+    : '<p style="color:var(--dim)">אין עדיין דירוגים — משוך מכולם קודם (🔄)</p>';
+}
 $('#top30').onclick = () => {
   filt.fav = !filt.fav; $('.chip.fav').classList.toggle('on', filt.fav);
   filt.sort = 'rating'; $('#sort').value = 'rating'; render();
