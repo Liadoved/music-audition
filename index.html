@@ -661,24 +661,30 @@ const BDUR = 10000;
 const clearBattleTimers = () => { battleTimers.forEach(clearTimeout); battleTimers = []; };
 
 function pickBattle() {
+  // fair fight = same mood AND same lane (never ים־תיכוני מול צבר)
   const pools = {};
-  for (const t of tracks) (pools[t.mood] = pools[t.mood] || []).push(t);
-  const moods = Object.keys(pools).filter(m => pools[m].length >= 2);
-  const mood = moods[Math.floor(Math.random() * moods.length)];
+  for (const t of tracks) {
+    const g = t.mood + '|' + (t.lane || '');
+    (pools[g] = pools[g] || []).push(t);
+  }
+  const groups = Object.values(pools).filter(pl => pl.length >= 2);
+  const total = groups.reduce((n, pl) => n + pl.length, 0);
+  let pick = Math.random() * total, pool = groups[0];
+  for (const pl of groups) { pick -= pl.length; if (pick <= 0) { pool = pl; break; } }
   const mineB = myBattles();
   const cnt = id => mineB.reduce((n, b) => n + (b.a === id || b.b === id ? 1 : 0), 0);
-  const pool = pools[mood].map(t => ({ t, c: cnt(t.id), r: Math.random() }))
+  const sorted = pool.map(t => ({ t, c: cnt(t.id), r: Math.random() }))
     .sort((x, y) => x.c - y.c || x.r - y.r);
-  const a = pool[0].t;
-  const cands = pool.slice(1, 8).filter(x => x.t.id !== a.id);
+  const a = sorted[0].t;
+  const cands = sorted.slice(1, 8).filter(x => x.t.id !== a.id);
   const b = cands[Math.floor(Math.random() * cands.length)].t;
-  return Math.random() < 0.5 ? { a, b, mood } : { a: b, b: a, mood };
+  return Math.random() < 0.5 ? { a, b } : { a: b, b: a };
 }
 
 function startBattle() {
   clearBattleTimers(); music.pause(); speech.pause();
   battle = pickBattle();
-  $('#amood').textContent = 'קרב ' + (myBattles().length + 1) + ' · ' + battle.a.mood_he;
+  $('#amood').textContent = 'קרב ' + (myBattles().length + 1) + ' · ' + battle.a.mood_he + (battle.a.lane_he ? ' · ' + battle.a.lane_he : '');
   for (const [side, t] of [['L', battle.a], ['R', battle.b]]) {
     const el = $('#acard' + side);
     el.querySelector('.aname').textContent = t.name;
@@ -709,7 +715,7 @@ function recordBattle(winnerSide) {
   if (!battle) return;
   clearBattleTimers(); music.pause(); speech.pause();
   const w = winnerSide === 0 ? battle.a : battle.b;
-  myBattles().push({ a: battle.a.id, b: battle.b.id, winner: w.id, mood: battle.mood, t: new Date().toISOString() });
+  myBattles().push({ a: battle.a.id, b: battle.b.id, winner: w.id, mood: battle.a.mood, lane: battle.a.lane || null, t: new Date().toISOString() });
   saveBattles();
   $('#acard' + (winnerSide === 0 ? 'L' : 'R')).classList.add('winner');
   $('#acardL').classList.remove('playing'); $('#acardR').classList.remove('playing');
