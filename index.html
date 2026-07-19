@@ -218,7 +218,12 @@
   <div class="abar">
     <button class="btn" id="aexit">✕ יציאה</button>
     <div class="atitle">⚔️ זירת הקרבות</div>
+    <button class="btn" id="atourney">🏆 טורניר</button>
     <button class="btn" id="aspeech" title="מנגן ברכה אמיתית מעל המוזיקה">🎤 מבחן דיבור</button>
+  </div>
+  <div id="tpicker" class="hidden">
+    <div class="tptitle">🏆 טורניר עומק — בחרו קטגוריה. סדרת קרבות חכמה תקבע סדר וניקוד מלאים, והתוצאה תישמר כמיון הקטגוריה.</div>
+    <div id="tgroups" class="rgroups"></div>
   </div>
   <div class="agenre" id="amood"></div>
   <div class="astats"><span id="abattleno"></span><span class="adot">·</span><span id="atotal"></span></div>
@@ -246,12 +251,15 @@
     </div>
   </div>
   <div id="astatus"></div>
+  <div class="arowbtns">
+    <button class="btn" id="aboth">🤝 שניהם ניצחו</button>
+  </div>
   <div class="aslider">
     <i class="sdot l"></i>
     <div class="atrack" id="atrack"><div class="athumb" id="athumb">⚔️</div></div>
     <i class="sdot r"></i>
   </div>
-  <div class="akeys">👆 גררו את העיגול לצד המנצח &nbsp;·&nbsp; ⬅➡ במקלדת &nbsp;·&nbsp; או הקישו 🏆</div>
+  <div class="akeys">👆 גררו את העיגול לצד המנצח &nbsp;·&nbsp; ⬅ שמאלי · ➡ ימני · ⬇ שניהם &nbsp;·&nbsp; או הקישו 🏆</div>
   <button class="btn" id="askip">↷ דלג לקרב הבא</button>
 </div>
 <style>
@@ -310,6 +318,14 @@
          text-shadow: 0 0 18px rgba(240,168,64,.6); flex: 0 0 74px; }
   #astatus { font-size: 16.5px; font-weight: 700; color: var(--amber); min-height: 24px; }
   .akeys { color: var(--dim); font-size: 12px; }
+  .arowbtns { display: flex; gap: 10px; }
+  #aboth { border-color: #4a5560; font-size: 14px; padding: 8px 18px; }
+  #aboth:hover { border-color: var(--green); color: var(--green); }
+  #arena.decide #aboth { animation: pulsewin 1.1s infinite; }
+  #tpicker { background: var(--panel); border: 1px solid var(--amber); border-radius: 14px;
+             padding: 14px 18px; max-width: min(700px, 94vw); display: flex; flex-direction: column; gap: 10px; }
+  .tptitle { font-size: 13.5px; color: var(--text); line-height: 1.5; }
+  #atourney.on { background: var(--amber); color: var(--amber-text); border-color: var(--amber); font-weight: 700; }
   .aslider { display: flex; direction: ltr; align-items: center; gap: 12px; margin-top: 2px; }
   .sdot { width: 22px; height: 22px; border-radius: 50%; flex: 0 0 22px; }
   .sdot.l { background: var(--amber); box-shadow: 0 0 10px rgba(240,168,64,.5); }
@@ -841,13 +857,88 @@ function pickBattle() {
   return Math.random() < 0.5 ? { a, b } : { a: b, b: a };
 }
 
+// ---- deep tournament: binary-insertion ordering within one category ----
+const LST = 'wewish_tourney_v1';
+let tourneyAll = JSON.parse(localStorage.getItem(LST) || '{}');
+const tourney = () => tourneyAll[rater] || null;
+const tSave = st => { if (st === null) delete tourneyAll[rater]; else tourneyAll[rater] = st;
+  localStorage.setItem(LST, JSON.stringify(tourneyAll)); };
+const byIdT = id => tracks.find(t => t.id === id);
+
+function tEstimate(n) { let s = 0; for (let k = 1; k < n; k++) s += Math.ceil(Math.log2(k + 1)); return s; }
+
+function tStart(group) {
+  const groups = rankGroups();
+  const ids = groups[group].items.map(t => t.id);
+  for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
+  tSave({ group, label: groups[group].label, size: ids.length, ranked: [ids.shift()], pool: ids,
+          cur: null, lo: 0, hi: 0, n: 0, est: tEstimate(ids.length + 1) });
+}
+
+function tNextBattle() {
+  const st = tourney();
+  while (true) {
+    if (!st.cur) {
+      if (!st.pool.length) return null; // complete
+      st.cur = st.pool.shift(); st.lo = 0; st.hi = st.ranked.length;
+    }
+    if (st.lo >= st.hi) { st.ranked.splice(st.lo, 0, st.cur); st.cur = null; continue; }
+    break;
+  }
+  tSave(st);
+  const mid = (st.lo + st.hi) >> 1;
+  const curT = byIdT(st.cur), midT = byIdT(st.ranked[mid]);
+  if (!curT || !midT) { tSave(null); return null; }
+  const curLeft = Math.random() < 0.5;
+  return { a: curLeft ? curT : midT, b: curLeft ? midT : curT, tourney: true, curSide: curLeft ? 0 : 1 };
+}
+
+function tApply(result) { // 0=cur wins, 1=ranked[mid] wins, 2=equal
+  const st = tourney(); if (!st) return;
+  const mid = (st.lo + st.hi) >> 1;
+  if (result === 2) { st.ranked.splice(mid + 1, 0, st.cur); st.cur = null; }
+  else if (result === 0) st.hi = mid;
+  else st.lo = mid + 1;
+  st.n++;
+  tSave(st);
+}
+
+function tFinish() {
+  const st = tourney();
+  myOrders()[st.group] = st.ranked.slice();
+  localStorage.setItem(LSO, JSON.stringify(allOrders));
+  syncPushSoon();
+  const group = st.group;
+  tSave(null);
+  $('#atourney').classList.remove('on');
+  toast('🏁 הטורניר הושלם — הסדר נשמר!');
+  clearBattleTimers(); music.pause(); speech.pause();
+  battle = null; $('#arena').classList.add('hidden');
+  rGroup = group;
+  openRanker();
+}
+
 function startBattle() {
   clearBattleTimers(); music.pause(); speech.pause();
-  battle = pickBattle();
   $('#arena').classList.remove('decide');
-  $('#amood').textContent = battle.a.mood_he + (battle.a.lane_he ? ' · ' + battle.a.lane_he : '');
-  $('#abattleno').textContent = 'קרב #' + (myBattles().length + 1);
-  $('#atotal').textContent = '⚡ ' + myBattles().length + ' קרבות הכרעת עד עכשיו';
+  const st = tourney();
+  if (st) {
+    const tb = tNextBattle();
+    if (!tb) { tFinish(); return; }
+    battle = tb;
+    $('#atourney').classList.add('on');
+    $('#askip').style.display = 'none';
+    $('#amood').textContent = '🏆 ' + st.label;
+    $('#abattleno').textContent = 'קרב ' + (st.n + 1) + ' מתוך ~' + st.est;
+    $('#atotal').textContent = '📶 דורגו ' + st.ranked.length + ' מתוך ' + st.size;
+  } else {
+    battle = pickBattle();
+    $('#atourney').classList.remove('on');
+    $('#askip').style.display = '';
+    $('#amood').textContent = battle.a.mood_he + (battle.a.lane_he ? ' · ' + battle.a.lane_he : '');
+    $('#abattleno').textContent = 'קרב #' + (myBattles().length + 1);
+    $('#atotal').textContent = '⚡ ' + myBattles().length + ' קרבות הכרעת עד עכשיו';
+  }
   for (const [side, t] of [['L', battle.a], ['R', battle.b]]) {
     const el = $('#acard' + side);
     el.querySelector('.aname').textContent = t.name;
@@ -895,13 +986,21 @@ function recordBattle(winnerSide) {
   if (!battle || battle.done) return;
   battle.done = true;
   clearBattleTimers(); music.pause(); speech.pause();
-  const w = winnerSide === 0 ? battle.a : battle.b;
-  myBattles().push({ a: battle.a.id, b: battle.b.id, winner: w.id, mood: battle.a.mood, lane: battle.a.lane || null, t: new Date().toISOString() });
+  const both = winnerSide === 2;
+  const w = both ? null : (winnerSide === 0 ? battle.a : battle.b);
+  myBattles().push({ a: battle.a.id, b: battle.b.id, winner: both ? 'both' : w.id,
+    mood: battle.a.mood, lane: battle.a.lane || null, tourney: !!battle.tourney, t: new Date().toISOString() });
   saveBattles();
   $('#arena').classList.remove('decide');
-  $('#acard' + (winnerSide === 0 ? 'L' : 'R')).classList.add('winner');
   $('#acardL').classList.remove('playing'); $('#acardR').classList.remove('playing');
-  $('#astatus').textContent = '🏆 ' + w.name + ' לוקח את הקרב!';
+  if (both) {
+    $('#acardL').classList.add('winner'); $('#acardR').classList.add('winner');
+    $('#astatus').textContent = '🤝 שניהם לוקחים את זה!';
+  } else {
+    $('#acard' + (winnerSide === 0 ? 'L' : 'R')).classList.add('winner');
+    $('#astatus').textContent = '🏆 ' + w.name + ' לוקח את הקרב!';
+  }
+  if (battle.tourney) tApply(both ? 2 : (winnerSide === battle.curSide ? 0 : 1));
   battleTimers.push(setTimeout(startBattle, 1100));
 }
 
@@ -909,6 +1008,7 @@ document.addEventListener('keydown', e => {
   if (!battle || $('#arena').classList.contains('hidden')) return;
   if (e.key === 'ArrowLeft') { e.preventDefault(); recordBattle(0); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); recordBattle(1); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); recordBattle(2); }
 });
 
 // ---- swipe slider: drag the circle toward the winner ----
@@ -973,6 +1073,28 @@ $('#acardL').querySelector('.areplay').onclick = () => playSide(0, false);
 $('#acardR').querySelector('.areplay').onclick = () => playSide(1, false);
 $('#acardL').querySelector('.awin').onclick = () => recordBattle(0);
 $('#acardR').querySelector('.awin').onclick = () => recordBattle(1);
+$('#aboth').onclick = () => recordBattle(2);
+
+// tournament picker
+$('#atourney').onclick = () => {
+  const panel = $('#tpicker');
+  if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
+  const st = tourney();
+  const groups = rankGroups();
+  $('#tgroups').innerHTML =
+    (st ? `<span class="chip on" data-act="resume">▶ המשך: ${st.label} (${st.n}/${st.est})</span>
+           <span class="chip" data-act="cancel">🗑 בטל טורניר</span>` : '') +
+    Object.entries(groups).map(([k, v]) =>
+      `<span class="chip" data-tg="${k}">${v.label} (${v.items.length})</span>`).join('');
+  panel.classList.remove('hidden');
+};
+$('#tgroups').onclick = e => {
+  const c = e.target.closest('.chip'); if (!c) return;
+  $('#tpicker').classList.add('hidden');
+  if (c.dataset.act === 'cancel') { tSave(null); $('#atourney').classList.remove('on'); startBattle(); return; }
+  if (c.dataset.act === 'resume') { startBattle(); return; }
+  if (c.dataset.tg) { tStart(c.dataset.tg); startBattle(); }
+};
 
 // ================= drag-ranking mode =================
 const myOrders = () => allOrders[rater] || (allOrders[rater] = {});
@@ -1117,11 +1239,12 @@ function eloRanking() {
   for (const b of seq) {
     const ra = R[b.a] ?? 1500, rb = R[b.b] ?? 1500;
     const ea = 1 / (1 + Math.pow(10, (rb - ra) / 400));
-    const sa = b.winner === b.a ? 1 : 0;
+    const sa = b.winner === b.a ? 1 : b.winner === b.b ? 0 : 0.5;
     R[b.a] = ra + 32 * (sa - ea);
     R[b.b] = rb + 32 * ((1 - sa) - (1 - ea));
     G[b.a] = (G[b.a] || 0) + 1; G[b.b] = (G[b.b] || 0) + 1;
-    W[b.winner] = (W[b.winner] || 0) + 1;
+    if (b.winner === 'both') { W[b.a] = (W[b.a] || 0) + 0.5; W[b.b] = (W[b.b] || 0) + 0.5; }
+    else W[b.winner] = (W[b.winner] || 0) + 1;
   }
   return { R, W, G, total: seq.length };
 }
