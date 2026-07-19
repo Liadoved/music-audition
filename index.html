@@ -147,6 +147,7 @@
     <button class="btn admin" id="pullall" title="מושך מהענן את הדירוגים של כל המדרגים" style="display:none">🔄 משוך מכולם</button>
     <button class="btn admin" id="statsbtn" style="display:none">📊 מה מנצח</button>
     <button class="btn" id="battlebtn" title="קרבות ראש בראש — הבחירות נרשמות ומשפיעות על הדירוג">⚔️ מוד קרבות</button>
+    <button class="btn" id="rankbtn" title="גוררים את השירים לסדר — הכי טוב למעלה">📋 מיון בגרירה</button>
     <button class="btn" id="top30">🏆 Top 30</button>
   </div>
 </header>
@@ -174,6 +175,44 @@
   #stats table { width: 100%; border-collapse: collapse; font-size: 13px; }
   #stats th, #stats td { padding: 5px 8px; text-align: center; border-bottom: 1px solid var(--line); }
   #stats th { color: var(--dim); font-weight: 600; }
+</style>
+<div id="ranker" class="hidden">
+  <div class="rbar">
+    <button class="btn" id="rexit">✕ חזרה לרשימה</button>
+    <div class="rtitle">📋 מיון בגרירה — הכי טוב למעלה</div>
+    <button class="btn" id="rspeech" title="מנגן ברכה אמיתית מעל המוזיקה">🎤 מבחן דיבור</button>
+  </div>
+  <div class="rgroups" id="rgroups"></div>
+  <div class="rhint" id="rhint">גררו שורות עם ⠿ · הסדר נשמר אוטומטית לפי מיקום: ראשון = 10, אחרון = 1</div>
+  <div id="rlist"></div>
+</div>
+<style>
+  #ranker { position: fixed; inset: 0; z-index: 94; overflow: auto;
+            background: radial-gradient(1200px 600px at 50% -10%, #232a33 0%, #101214 60%);
+            padding: 18px 14px 120px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .rbar { display: flex; gap: 12px; align-items: center; width: min(760px, 96vw); justify-content: space-between; }
+  .rtitle { font-weight: 800; font-size: 16px; color: var(--dim); }
+  #rspeech.on { background: var(--amber); color: var(--amber-text); border-color: var(--amber); font-weight: 700; }
+  .rgroups { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; max-width: min(760px, 96vw); }
+  .rhint { color: var(--dim); font-size: 12.5px; text-align: center; }
+  #rlist { width: min(700px, 96vw); display: flex; flex-direction: column; gap: 7px; }
+  .rrow { display: flex; align-items: center; gap: 11px; background: var(--panel);
+          border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px;
+          transition: transform .15s, box-shadow .15s, border-color .15s; }
+  .rrow.dragging { opacity: .92; border-color: var(--amber); box-shadow: 0 10px 30px rgba(0,0,0,.5);
+                   transform: scale(1.02); position: relative; z-index: 5; }
+  .rrow.top1 { border-color: rgba(240,168,64,.7); }
+  .rrank { min-width: 40px; text-align: center; font-weight: 900; font-size: 16px; color: var(--dim); }
+  .rrow.top1 .rrank, .rrow.top2 .rrank, .rrow.top3 .rrank { font-size: 19px; }
+  .rplay { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); flex: 0 0 36px;
+           background: var(--panel2); color: var(--text); font-size: 14px; cursor: pointer; }
+  .rplay:hover, .rrow.playing .rplay { border-color: var(--amber); color: var(--amber); }
+  .rmeta { min-width: 0; flex: 1; }
+  .rname { font-weight: 700; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rsub { color: var(--dim); font-size: 11.5px; }
+  .rhandle { font-size: 22px; color: #5a636d; cursor: grab; padding: 4px 6px; touch-action: none; user-select: none; }
+  .rhandle:active { cursor: grabbing; }
+  @media (max-width: 700px) { .rrow { padding: 9px 10px; gap: 8px; } .rname { font-size: 13.5px; } }
 </style>
 <div id="arena" class="hidden">
   <div class="abar">
@@ -327,6 +366,10 @@ let imported = JSON.parse(localStorage.getItem(LSI) || '{}');
 const LSB = 'wewish_battles_v1', LSIB = 'wewish_imported_battles';
 let allBattles = JSON.parse(localStorage.getItem(LSB) || '{}');
 let importedBattles = JSON.parse(localStorage.getItem(LSIB) || '{}');
+// drag-ranking storage: per rater {groupKey: [trackIds best->worst]}
+const LSO = 'wewish_orders_v1', LSIO = 'wewish_imported_orders';
+let allOrders = JSON.parse(localStorage.getItem(LSO) || '{}');
+let importedOrders = JSON.parse(localStorage.getItem(LSIO) || '{}');
 let rater = (localStorage.getItem(LSR) || '').trim();
 // migrate v1 single-rater ratings (Liad's early session) once
 const v1 = JSON.parse(localStorage.getItem('wewish_music_ratings_v1') || 'null');
@@ -394,12 +437,15 @@ async function syncLoadRater(name) {
     const d1 = await sGet('r-' + det).catch(() => null);
     if (d1 && d1.ratings) sources.push(d1.ratings);
     if (d1 && d1.battles) bsrc.push(d1.battles);
+    const osrc = [];
+    if (d1 && d1.orders) osrc.push(d1.orders);
     const idx0 = await sGet('index').catch(() => null);
     const legacy = idx0 && idx0.raters && idx0.raters[name];
     if (legacy && legacy !== det) {
       const d2 = await sGet('r-' + legacy).catch(() => null);
       if (d2 && d2.ratings) sources.push(d2.ratings);
       if (d2 && d2.battles) bsrc.push(d2.battles);
+      if (d2 && d2.orders) osrc.push(d2.orders);
     }
     // merge into local: never overwrite a local entry that has data
     const local = all[name] || (all[name] = {});
@@ -414,6 +460,11 @@ async function syncLoadRater(name) {
       for (const b of (arr || []))
         if (!seenB.has(b.t + b.a + b.b)) { localB.push(b); seenB.add(b.t + b.a + b.b); }
     localStorage.setItem(LSB, JSON.stringify(allBattles));
+    const localO = allOrders[name] || (allOrders[name] = {});
+    for (const o of osrc)
+      for (const [g, arr] of Object.entries(o || {}))
+        if (!localO[g] || !localO[g].length) localO[g] = arr;
+    localStorage.setItem(LSO, JSON.stringify(allOrders));
     // self-healing index entry: write + verify, up to 3 attempts
     for (let i = 0; i < 3; i++) {
       const cur = (await sGet('index').catch(() => null)) || { raters: {} };
@@ -436,8 +487,9 @@ function flushNow() {
   const ratings = {};
   for (const [id, v] of Object.entries(mine())) if (hasData(v)) ratings[id] = v;
   const battles = allBattles[rater] || [];
-  if (!Object.keys(ratings).length && !battles.length) return;
-  const payload = JSON.stringify({ rater, updated: new Date().toISOString(), ratings, battles });
+  const orders = allOrders[rater] || {};
+  if (!Object.keys(ratings).length && !battles.length && !Object.keys(orders).length) return;
+  const payload = JSON.stringify({ rater, updated: new Date().toISOString(), ratings, battles, orders });
   // text/plain keeps sendBeacon CORS-safelisted; the store keeps raw bytes either way
   navigator.sendBeacon(SYNC_BASE + SYNC_NS + '-r-' + myDocKey, new Blob([payload], { type: 'text/plain' }));
 }
@@ -452,7 +504,7 @@ function syncPushSoon() {
     try {
       const ratings = {};
       for (const [id, v] of Object.entries(mine())) if (hasData(v)) ratings[id] = v;
-      const r = await sPut('r-' + myDocKey, { rater, updated: new Date().toISOString(), ratings, battles: allBattles[rater] || [] });
+      const r = await sPut('r-' + myDocKey, { rater, updated: new Date().toISOString(), ratings, battles: allBattles[rater] || [], orders: allOrders[rater] || {} });
       syncStat(r.ok ? '☁ נשמר ' + new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '⚠ מקומי בלבד');
     } catch (e) { syncStat('⚠ מקומי בלבד'); }
   }, 1200);
@@ -468,9 +520,11 @@ async function pullAll() {
       const doc = await sGet('r-' + key).catch(() => null);
       if (doc && doc.ratings) { imported[name] = doc.ratings; n++; }
       if (doc && doc.battles) importedBattles[name] = doc.battles;
+      if (doc && doc.orders) importedOrders[name] = doc.orders;
     }
     localStorage.setItem(LSI, JSON.stringify(imported));
     localStorage.setItem(LSIB, JSON.stringify(importedBattles));
+    localStorage.setItem(LSIO, JSON.stringify(importedOrders));
     syncStat('☁ מסונכרן');
     toast(`נמשכו דירוגים של ${n} מדרגים`);
     render();
@@ -737,7 +791,22 @@ function renderStats() {
        <table><tr><th>#</th><th style="text-align:right">שיר</th><th>סוג</th><th>Elo</th><th>נצ׳-הפ׳</th><th>ממוצע כוכבים</th></tr>${eloTable}</table>
        <p style="color:var(--dim);font-size:12px;margin-top:8px">Elo מתחיל ב-1500; ניצחון על יריב חזק שווה יותר. השווה לעמודת הכוכבים כדי לראות איך שתי השיטות מתכתבות.</p>`
     : '<p style="color:var(--dim);margin-top:18px">⚔️ אין עדיין קרבות — היכנסו למוד קרבות</p>';
-  $('#statsbody').innerHTML = starHtml + battleHtml;
+  const rk = rankScores();
+  const rkRows = Object.entries(rk).map(([id, v]) => ({ t: byId[id], avg: v.sum / v.n, n: v.n }))
+    .filter(x => x.t).sort((a, b) => b.avg - a.avg);
+  const rkGroups = {};
+  for (const x of rkRows) { const g = x.t.mood_he + (x.t.lane_he ? ' · ' + x.t.lane_he : ''); if (!rkGroups[g]) rkGroups[g] = x; }
+  const rkWinners = Object.entries(rkGroups).map(([g, x]) =>
+    `<span class="b" style="margin-inline-end:6px">🥇 ${g}: <b>${x.t.name}</b> (${x.avg.toFixed(1)})</span>`).join('');
+  const rkTable = rkRows.slice(0, 40).map((x, i) => `<tr>
+    <td>${i + 1}</td><td style="text-align:right">${x.t.name}</td><td>${x.t.mood_he}${x.t.lane_he ? ' · ' + x.t.lane_he : ''}</td>
+    <td><b>${x.avg.toFixed(1)}</b></td><td>${x.n}</td></tr>`).join('');
+  const rankHtml = rkRows.length
+    ? `<h3 style="margin:22px 0 8px">📋 מיון בגרירה — ציון לפי מיקום (ראשון=10, אחרון=1)</h3>
+       <div style="margin-bottom:10px">${rkWinners}</div>
+       <table><tr><th>#</th><th style="text-align:right">שיר</th><th>קטגוריה</th><th>ציון מיקום</th><th>מדרגים</th></tr>${rkTable}</table>`
+    : '<p style="color:var(--dim);margin-top:18px">📋 אין עדיין מיוני גרירה — היכנסו למיון בגרירה</p>';
+  $('#statsbody').innerHTML = starHtml + battleHtml + rankHtml;
 }
 $('#top30').onclick = () => {
   filt.fav = !filt.fav; $('.chip.fav').classList.toggle('on', filt.fav);
@@ -904,6 +973,139 @@ $('#acardL').querySelector('.areplay').onclick = () => playSide(0, false);
 $('#acardR').querySelector('.areplay').onclick = () => playSide(1, false);
 $('#acardL').querySelector('.awin').onclick = () => recordBattle(0);
 $('#acardR').querySelector('.awin').onclick = () => recordBattle(1);
+
+// ================= drag-ranking mode =================
+const myOrders = () => allOrders[rater] || (allOrders[rater] = {});
+let rGroup = null, rTouched = false;
+const groupKey = t => t.mood + '|' + (t.lane || '');
+const groupLabel = t => t.mood_he + (t.lane_he ? ' · ' + t.lane_he : '');
+
+function rankGroups() {
+  const g = {};
+  for (const t of tracks) (g[groupKey(t)] = g[groupKey(t)] || { label: groupLabel(t), items: [] }).items.push(t);
+  return Object.fromEntries(Object.entries(g).filter(([, v]) => v.items.length >= 2));
+}
+
+function openRanker() {
+  if (!rater) { showWelcome(); return; }
+  $('#ranker').classList.remove('hidden');
+  const groups = rankGroups();
+  if (!rGroup || !groups[rGroup]) rGroup = Object.keys(groups)[0];
+  $('#rgroups').innerHTML = Object.entries(groups).map(([k, v]) => {
+    const done = (myOrders()[k] || []).length ? ' ✓' : '';
+    return `<span class="chip ${k === rGroup ? 'on' : ''}" data-g="${k}">${v.label} (${v.items.length})${done}</span>`;
+  }).join('');
+  renderRList();
+}
+
+function orderedTracks() {
+  const groups = rankGroups();
+  const items = groups[rGroup].items;
+  const saved = myOrders()[rGroup] || [];
+  const byId = Object.fromEntries(items.map(t => [t.id, t]));
+  const out = [];
+  for (const id of saved) if (byId[id]) { out.push(byId[id]); delete byId[id]; }
+  const rest = Object.values(byId);
+  for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [rest[i], rest[j]] = [rest[j], rest[i]]; }
+  return out.concat(rest);
+}
+
+function renderRList() {
+  rTouched = (myOrders()[rGroup] || []).length > 0;
+  const list = orderedTracks();
+  $('#rlist').innerHTML = list.map((t, i) => {
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+    const mm = Math.floor(t.dur_s / 60), ss = String(Math.round(t.dur_s % 60)).padStart(2, '0');
+    return `<div class="rrow ${i < 3 ? 'top' + (i + 1) : ''}" data-id="${t.id}">
+      <div class="rrank">${medal}</div>
+      <button class="rplay">▶</button>
+      <div class="rmeta"><div class="rname">${t.name}</div>
+        <div class="rsub">${t.source === 'old' ? 'ישן' : 'חדש'} · ${mm}:${ss}</div></div>
+      <div class="rhandle">⠿</div>
+    </div>`;
+  }).join('');
+}
+
+function saveOrderFromDom() {
+  const ids = [...$('#rlist').querySelectorAll('.rrow')].map(r => r.dataset.id);
+  myOrders()[rGroup] = ids;
+  localStorage.setItem(LSO, JSON.stringify(allOrders));
+  rTouched = true;
+  syncPushSoon();
+  // refresh rank badges + group ✓ without full rebuild
+  [...$('#rlist').querySelectorAll('.rrow')].forEach((r, i) => {
+    r.className = 'rrow' + (i < 3 ? ' top' + (i + 1) : '');
+    r.querySelector('.rrank').textContent = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+  });
+  const chip = $('#rgroups').querySelector(`[data-g="${CSS.escape(rGroup)}"]`);
+  if (chip && !chip.textContent.includes('✓')) chip.textContent += ' ✓';
+}
+
+$('#rgroups') && ($('#rgroups').onclick = e => {
+  const c = e.target.closest('.chip'); if (!c) return;
+  music.pause();
+  rGroup = c.dataset.g;
+  [...$('#rgroups').children].forEach(x => x.classList.toggle('on', x === c));
+  renderRList();
+});
+
+$('#rlist').addEventListener('click', e => {
+  const btn = e.target.closest('.rplay'); if (!btn) return;
+  const row = btn.closest('.rrow');
+  const t = tracks.find(x => x.id === row.dataset.id);
+  if (row.classList.contains('playing') && !music.paused) { music.pause(); row.classList.remove('playing'); return; }
+  [...$('#rlist').querySelectorAll('.rrow.playing')].forEach(r => r.classList.remove('playing'));
+  music.src = t.file.split('/').map(encodeURIComponent).join('/') + '#t=' + Math.min(20, Math.round((t.dur_s || 60) * 0.2));
+  music.volume = baseVol();
+  music.play().catch(() => {});
+  if (speechOn) { speech.currentTime = 0; speech.play().catch(() => {}); }
+  row.classList.add('playing');
+  btn.textContent = '⏸';
+});
+
+// pointer-based row dragging via the handle (mouse + touch)
+let dragRow = null;
+$('#rlist').addEventListener('pointerdown', e => {
+  const h = e.target.closest('.rhandle'); if (!h) return;
+  dragRow = h.closest('.rrow');
+  dragRow.classList.add('dragging');
+  try { h.setPointerCapture(e.pointerId); } catch (err) {}
+  e.preventDefault();
+});
+document.addEventListener('pointermove', e => {
+  if (!dragRow) return;
+  const rows = [...$('#rlist').querySelectorAll('.rrow')].filter(r => r !== dragRow);
+  let placed = false;
+  for (const r of rows) {
+    const b = r.getBoundingClientRect();
+    if (e.clientY < b.top + b.height / 2) { r.parentNode.insertBefore(dragRow, r); placed = true; break; }
+  }
+  if (!placed) $('#rlist').appendChild(dragRow);
+});
+document.addEventListener('pointerup', () => {
+  if (!dragRow) return;
+  dragRow.classList.remove('dragging');
+  dragRow = null;
+  saveOrderFromDom();
+});
+
+$('#rankbtn').onclick = openRanker;
+$('#rexit').onclick = () => { music.pause(); speech.pause(); $('#ranker').classList.add('hidden'); render(); };
+$('#rspeech').onclick = () => { $('#speechbtn').click(); $('#rspeech').classList.toggle('on', speechOn); };
+
+// position -> score (top=10, bottom=1) across every rater
+function rankScores() {
+  const out = {};
+  for (const orders of Object.values({ ...importedOrders, ...allOrders }))
+    for (const arr of Object.values(orders || {})) {
+      const n = (arr || []).length; if (n < 2) continue;
+      arr.forEach((id, i) => {
+        const sc = 1 + 9 * (n - 1 - i) / (n - 1);
+        (out[id] = out[id] || { sum: 0, n: 0 }); out[id].sum += sc; out[id].n++;
+      });
+    }
+  return out;
+}
 
 // Elo over every battle from every rater (chronological)
 function eloRanking() {
