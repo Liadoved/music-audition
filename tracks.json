@@ -1,6 +1,6 @@
 [
  {
-  "prompt": null,
+  "prompt": "minimal cinematic piano guitar, free tempo, light and joyful, piano soft major chords spaced far apart, clean electric guitar very subtle harmonics, extremely sparse, peaceful and optimistic atmosphere",
   "prompt_version": null,
   "id": "old/emotional__cedar light.mp3",
   "file": "old/emotional__cedar light.mp3",
@@ -10,14 +10,14 @@
    "pro": 5,
    "pop": 5,
    "msg": 5,
-   "note": "מזרחי־עדין שעובד — ההוכחה שהלאנה יכולה לנשום. · פנוי ורגוע מתחת לדיבור ✓"
+   "note": "פסנתר וגיטרה נקייה (WEST STYLE של אוהד) — רגוע ופנוי, מודל טוב. · פנוי ורגוע מתחת לדיבור ✓"
   },
   "name": "cedar light",
   "source": "old",
   "mood": "emotional",
   "mood_he": "מרגש",
-  "lane": "med",
-  "lane_he": "ים־תיכוני",
+  "lane": "sabra",
+  "lane_he": "צבר",
   "dur_s": 152.8,
   "lufs": -15.1,
   "lra": 7.9,
@@ -26,7 +26,7 @@
   "activity_pct": 93.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal mediterranean documentary piano guitar, 70 BPM, uplifting and festive, piano clear major melody, nylon guitar warm open chords, very sparse arrangement, emotional israeli tone, silence as part of the music",
   "prompt_version": null,
   "id": "old/emotional__courtyard song.mp3",
   "file": "old/emotional__courtyard song.mp3",
@@ -52,7 +52,7 @@
   "activity_pct": 98.0
  },
  {
-  "prompt": null,
+  "prompt": "oriental ambient cinematic, 72 BPM, heartfelt and uplifting, qanun delicate plucks with fast tremolo, soft string ensemble swelling pads, light frame drum pulses, nostalgic israeli film score vibe",
   "prompt_version": null,
   "id": "old/emotional__eastern film.mp3",
   "file": "old/emotional__eastern film.mp3",
@@ -78,7 +78,7 @@
   "activity_pct": 99.0
  },
  {
-  "prompt": null,
+  "prompt": "ambient guitar cinematic, 75 BPM, emotional and expansive, electric guitar with delay and reverb swells, volume pedal textures, slow build, atmospheric and immersive, post-rock influence",
   "prompt_version": null,
   "id": "old/emotional__echo guitar.mp3",
   "file": "old/emotional__echo guitar.mp3",
@@ -104,7 +104,7 @@
   "activity_pct": 97.0
  },
  {
-  "prompt": null,
+  "prompt": "cinematic piano ambient, 68 BPM, emotional and uplifting, soft felt piano chords, warm string ensemble swells, deep reverb space, no percussion, gradual build, modern film score style, intimate and inspiring",
   "prompt_version": null,
   "id": "old/emotional__felt piano.mp3",
   "file": "old/emotional__felt piano.mp3",
@@ -130,7 +130,7 @@
   "activity_pct": 91.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal cinematic piano guitar documentary, 68 BPM, warm and inspiring, piano simple major chord progression, clean electric guitar soft sustained notes, modern film score clarity, calm celebratory feeling, intimate and refined",
   "prompt_version": null,
   "id": "old/emotional__film chords.mp3",
   "file": "old/emotional__film chords.mp3",
@@ -156,7 +156,7 @@
   "activity_pct": 95.0
  },
  {
-  "prompt": null,
+  "prompt": "israeli folk minimal piano guitar, free tempo, light and uplifting, acoustic guitar slow strumming on open major chords, old israeli song atmosphere, gentle joy and innocence",
   "prompt_version": null,
   "id": "old/emotional__folk lullaby.mp3",
   "file": "old/emotional__folk lullaby.mp3",
@@ -182,7 +182,7 @@
   "activity_pct": 98.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal mediterranean documentary piano guitar, 70 BPM, uplifting and festive, piano clear major melody, nylon guitar warm open chords, very sparse arrangement, emotional israeli tone, silence as part of the music",
   "prompt_version": null,
   "id": "old/emotional__gentle ceremony.mp3",
   "file": "old/emotional__gentle ceremony.mp3",
@@ -198,8 +198,8 @@
   "source": "old",
   "mood": "emotional",
   "mood_he": "מרגש",
-  "lane": "sabra",
-  "lane_he": "צבר",
+  "lane": "med",
+  "lane_he": "ים־תיכוני",
   "dur_s": 123.4,
   "lufs": -13.8,
   "lra": 5.0,
@@ -208,7 +208,7 @@
   "activity_pct": 98.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal mediterranean piano guitar, free tempo, bright and uplifting, piano simple major melody in high register, no minor tension, no rhythm, airy and sunlit israeli feeling, calm and optimistic, pure and open",
   "prompt_version": null,
   "id": "old/emotional__morning light.mp3",
   "file": "old/emotional__morning light.mp3",
@@ -224,8 +224,8 @@
   "source": "old",
   "mood": "emotional",
   "mood_he": "מרגש",
-  "lane": "sabra",
-  "lane_he": "צבר",
+  "lane": "med",
+  "lane_he": "ים־תיכוני",
   "dur_s": 34.9,
   "lufs": -13.1,
   "lra": 3.5,
@@ -234,7 +234,7 @@
   "activity_pct": 98.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal piano guitar ambient, 65 BPM, calm and uplifting, piano light major chords with long gaps, extremely low density, silence between notes, peaceful and optimistic atmosphere",
   "prompt_version": null,
   "id": "old/emotional__open space.mp3",
   "file": "old/emotional__open space.mp3",
@@ -260,7 +260,7 @@
   "activity_pct": 98.0
  },
  {
-  "prompt": null,
+  "prompt": "middle eastern cinematic ambient, 72 BPM, deeply emotional and intimate, live oud with expressive microtonal slides and finger noise, sparse bowed strings (viola and cello harmonics), low frame drum heartbeat pulses, silence between phrases, raw and human, israeli emotional storytelling",
   "prompt_version": null,
   "id": "old/emotional__oud heartbeat.mp3",
   "file": "old/emotional__oud heartbeat.mp3",
@@ -286,7 +286,7 @@
   "activity_pct": 79.0
  },
  {
-  "prompt": null,
+  "prompt": "oriental ambient cinematic, 72 BPM, heartfelt and uplifting, qanun delicate plucks with fast tremolo, soft string ensemble swelling pads, light frame drum pulses, nostalgic israeli film score vibe",
   "prompt_version": null,
   "id": "old/emotional__qanun dusk.mp3",
   "file": "old/emotional__qanun dusk.mp3",
@@ -312,7 +312,7 @@
   "activity_pct": 99.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal cinematic piano guitar, free tempo, light and joyful, piano soft major chords spaced far apart, clean electric guitar very subtle harmonics, extremely sparse, peaceful and optimistic atmosphere",
   "prompt_version": null,
   "id": "old/emotional__quiet notes.mp3",
   "file": "old/emotional__quiet notes.mp3",
@@ -338,7 +338,7 @@
   "activity_pct": 93.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal cinematic comedic piano guitar, free tempo, subtle and playful, piano light staccato chords mixed with short flowing melodic phrases, simple major harmony, intelligent and friendly atmosphere",
   "prompt_version": null,
   "id": "old/funny__bright comedy.mp3",
   "file": "old/funny__bright comedy.mp3",
@@ -364,7 +364,7 @@
   "activity_pct": 88.0
  },
  {
-  "prompt": null,
+  "prompt": "Light comedic cinematic ambient music with Mediterranean influences, playful piano motifs, short expressive oud notes, humorous violin phrases and a gentle darbuka rhythm, 88 BPM, charming and nostalgic, capturing funny childhood memories and amusing family stories",
   "prompt_version": null,
   "id": "old/funny__family stories.mp3",
   "file": "old/funny__family stories.mp3",
@@ -380,8 +380,8 @@
   "source": "old",
   "mood": "funny",
   "mood_he": "מצחיק",
-  "lane": "sabra",
-  "lane_he": "צבר",
+  "lane": "med",
+  "lane_he": "ים־תיכוני",
   "dur_s": 89.0,
   "lufs": -14.6,
   "lra": 4.4,
@@ -390,7 +390,7 @@
   "activity_pct": 91.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal mediterranean comedic piano guitar, nylon guitar gentle flowing strums, israeli mediterranean charm, relaxed humorous flow, soft smile atmosphere",
   "prompt_version": null,
   "id": "old/funny__nylon grin.mp3",
   "file": "old/funny__nylon grin.mp3",
@@ -406,8 +406,8 @@
   "source": "old",
   "mood": "funny",
   "mood_he": "מצחיק",
-  "lane": "sabra",
-  "lane_he": "צבר",
+  "lane": "med",
+  "lane_he": "ים־תיכוני",
   "dur_s": 24.8,
   "lufs": -12.8,
   "lra": 2.3,
@@ -416,7 +416,7 @@
   "activity_pct": 78.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal mediterranean comedic piano guitar, free tempo, light and playful, nylon guitar gentle flowing strums, piano answering with light staccato phrases, israeli mediterranean charm, soft smile atmosphere",
   "prompt_version": null,
   "id": "old/funny__nylon smile.mp3",
   "file": "old/funny__nylon smile.mp3",
@@ -432,8 +432,8 @@
   "source": "old",
   "mood": "funny",
   "mood_he": "מצחיק",
-  "lane": "sabra",
-  "lane_he": "צבר",
+  "lane": "med",
+  "lane_he": "ים־תיכוני",
   "dur_s": 157.2,
   "lufs": -14.2,
   "lra": 4.0,
@@ -442,7 +442,7 @@
   "activity_pct": 85.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal mediterranean comedic piano guitar, free tempo, light and playful, nylon guitar short open chord strums, silence between phrases creating humor timing, gentle israeli charm",
   "prompt_version": null,
   "id": "old/funny__olive laugh.mp3",
   "file": "old/funny__olive laugh.mp3",
@@ -468,7 +468,7 @@
   "activity_pct": 73.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal cinematic comedic piano guitar, free tempo, subtle and playful, piano light staccato chords mixed with short flowing melodic phrases, simple major harmony, intelligent and friendly atmosphere",
   "prompt_version": null,
   "id": "old/funny__playful keys.mp3",
   "file": "old/funny__playful keys.mp3",
@@ -494,7 +494,7 @@
   "activity_pct": 92.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal mediterranean comedic piano guitar, free tempo, light and playful, nylon guitar short open chord strums, silence between phrases creating humor timing, gentle israeli charm",
   "prompt_version": null,
   "id": "old/funny__quiet chuckle.mp3",
   "file": "old/funny__quiet chuckle.mp3",
@@ -510,8 +510,8 @@
   "source": "old",
   "mood": "funny",
   "mood_he": "מצחיק",
-  "lane": "sabra",
-  "lane_he": "צבר",
+  "lane": "med",
+  "lane_he": "ים־תיכוני",
   "dur_s": 16.9,
   "lufs": -14.4,
   "lra": 2.5,
@@ -520,7 +520,7 @@
   "activity_pct": 75.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal mediterranean comedic piano guitar, free tempo, light and playful, silence between phrases creating humor timing, warm acoustic feel, gentle israeli charm, soft smile atmosphere",
   "prompt_version": null,
   "id": "old/funny__soft smirk.mp3",
   "file": "old/funny__soft smirk.mp3",
@@ -536,8 +536,8 @@
   "source": "old",
   "mood": "funny",
   "mood_he": "מצחיק",
-  "lane": "sabra",
-  "lane_he": "צבר",
+  "lane": "med",
+  "lane_he": "ים־תיכוני",
   "dur_s": 35.4,
   "lufs": -15.0,
   "lra": 4.6,
@@ -546,7 +546,7 @@
   "activity_pct": 70.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal cinematic comedic piano guitar, free tempo, subtle and playful, piano light staccato chords, warm and clean sound, intelligent humor, calm and friendly tone",
   "prompt_version": null,
   "id": "old/funny__staccato grin.mp3",
   "file": "old/funny__staccato grin.mp3",
@@ -572,7 +572,7 @@
   "activity_pct": 82.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal israeli folk comedic piano guitar, free tempo, warm and playful, acoustic guitar gentle open strums, nostalgic israeli togetherness feeling, light humor from interaction between guitar and piano, soft celebratory atmosphere",
   "prompt_version": null,
   "id": "old/funny__warm strum.mp3",
   "file": "old/funny__warm strum.mp3",
@@ -598,7 +598,7 @@
   "activity_pct": 95.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal cinematic comedic piano guitar, free tempo, subtle and witty, piano light staccato chords with irregular spacing, playful timing through pauses, intelligent humor, non-intrusive documentary tone",
   "prompt_version": null,
   "id": "old/funny__witty keys.mp3",
   "file": "old/funny__witty keys.mp3",
@@ -624,7 +624,7 @@
   "activity_pct": 79.0
  },
  {
-  "prompt": null,
+  "prompt": "mediterranean piano guitar ambient, 96 BPM, joyful and bright, rhythmic nylon guitar with light strumming, piano playful staccato chords in upper register, sunny israeli beach atmosphere, uplifting and flowing",
   "prompt_version": null,
   "id": "old/happy__beach staccato.mp3",
   "file": "old/happy__beach staccato.mp3",
@@ -650,7 +650,7 @@
   "activity_pct": 95.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal israeli nostalgic piano guitar, free tempo, light and innocent, piano simple bright melody in major key, acoustic guitar very soft arpeggios, warm intimate recording feel, old israeli simplicity, gentle humor, peaceful and quietly joyful",
   "prompt_version": null,
   "id": "old/happy__couscous morning.mp3",
   "file": "old/happy__couscous morning.mp3",
@@ -660,14 +660,14 @@
    "pro": 3,
    "pop": 4,
    "msg": 4,
-   "note": "8 דקות של גרוב נחמד אבל מונוטוני; darbuka picnic החדש עושה את זה טוב יותר."
+   "note": "פסנתר-גיטרה נוסטלגי (לא מזרחי כמו שהשם רומז); 8 דקות, קצת מונוטוני."
   },
   "name": "couscous morning",
   "source": "old",
   "mood": "happy",
   "mood_he": "שמח",
-  "lane": "med",
-  "lane_he": "ים־תיכוני",
+  "lane": "sabra",
+  "lane_he": "צבר",
   "dur_s": 479.4,
   "lufs": -15.7,
   "lra": 4.4,
@@ -676,7 +676,7 @@
   "activity_pct": 97.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal israeli folk piano guitar, free tempo, warm and joyful, acoustic guitar gentle open strums, no minor chords, no tension, nostalgic israeli feeling, togetherness and warmth",
   "prompt_version": null,
   "id": "old/happy__folk warmth.mp3",
   "file": "old/happy__folk warmth.mp3",
@@ -702,7 +702,7 @@
   "activity_pct": 91.0
  },
  {
-  "prompt": null,
+  "prompt": "mediterranean ambient groove, 95 BPM, light and joyful, bouzouki rhythmic picking, hand percussion (riq and darbuka), airy pads, relaxed seaside tel aviv vibe, flowing and organic",
   "prompt_version": null,
   "id": "old/happy__seaside groove.mp3",
   "file": "old/happy__seaside groove.mp3",
@@ -728,7 +728,7 @@
   "activity_pct": 95.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal mediterranean piano guitar, free tempo, warm and joyful, nylon guitar gentle flowing strums, piano simple bright melody, israeli sunlit atmosphere, human and heartfelt, soft celebratory feeling",
   "prompt_version": null,
   "id": "old/happy__sunny strings.mp3",
   "file": "old/happy__sunny strings.mp3",
@@ -744,8 +744,8 @@
   "source": "old",
   "mood": "happy",
   "mood_he": "שמח",
-  "lane": "sabra",
-  "lane_he": "צבר",
+  "lane": "med",
+  "lane_he": "ים־תיכוני",
   "dur_s": 63.6,
   "lufs": -13.3,
   "lra": 2.9,
@@ -754,7 +754,7 @@
   "activity_pct": 94.0
  },
  {
-  "prompt": null,
+  "prompt": "minimal israeli folk piano guitar, free tempo, warm and joyful, acoustic guitar gentle open strums, no minor chords, no tension, nostalgic israeli feeling, togetherness and warmth",
   "prompt_version": null,
   "id": "old/happy__village song.mp3",
   "file": "old/happy__village song.mp3",
