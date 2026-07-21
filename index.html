@@ -645,7 +645,7 @@ function render() {
       <div class="row1">
         <button class="play" data-act="play">${cur === t.id && !music.paused ? '⏸' : '▶'}</button>
         <div style="min-width:0">
-          <div class="tname">${t.name}</div>
+          <div class="tname" title="${(t.prompt || '').replace(/"/g, '&quot;')}">${t.name}</div>
           <div class="badges">
             <span class="b ${t.source}">${t.source === 'old' ? 'ישן' : 'חדש'}</span>
             <span class="b">${t.mood_he}</span>
