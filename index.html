@@ -184,6 +184,10 @@
   </div>
   <div class="rgroups" id="rgroups"></div>
   <div class="rhint" id="rhint">גררו שורות עם ⠿ · הסדר נשמר אוטומטית לפי מיקום: ראשון = 10, אחרון = 1</div>
+  <div class="rtools">
+    <button class="btn" id="rsuggest">🤖 התחל מהסדר המומלץ שלי</button>
+    <button class="btn" id="rsave">💾 שמור את הסדר המוצג</button>
+  </div>
   <div id="rlist"></div>
 </div>
 <style>
@@ -195,6 +199,7 @@
   #rspeech.on { background: var(--amber); color: var(--amber-text); border-color: var(--amber); font-weight: 700; }
   .rgroups { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; max-width: min(760px, 96vw); }
   .rhint { color: var(--dim); font-size: 12.5px; text-align: center; }
+  .rtools { display: flex; gap: 8px; }
   #rlist { width: min(700px, 96vw); display: flex; flex-direction: column; gap: 7px; }
   .rrow { display: flex; align-items: center; gap: 11px; background: var(--panel);
           border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px;
@@ -419,6 +424,7 @@ const save = () => { localStorage.setItem(LS2, JSON.stringify(all)); localStorag
 
 // ---- cloud sync ----
 let myDocKey = localStorage.getItem('wewish_synckey') || '';
+let serverSeen = false; // becomes true after any successful cloud read
 let pushTimer = null;
 const syncStat = msg => { const el = $('#syncstat'); if (!el) return;
   el.textContent = msg; el.style.color = msg.startsWith('⚠') ? 'var(--red)' : 'var(--dim)'; };
@@ -450,7 +456,8 @@ async function syncLoadRater(name) {
   try {
     // gather every server copy of this rater: deterministic doc + legacy doc (old random key)
     const sources = [], bsrc = [];
-    const d1 = await sGet('r-' + det).catch(() => null);
+    let d1 = null;
+    try { d1 = await sGet('r-' + det); serverSeen = true; } catch (e) {}
     // rolling daily snapshot: keep the last 7 days of this rater's doc
     if (d1 && (Object.keys(d1.ratings || {}).length || (d1.battles || []).length || Object.keys(d1.orders || {}).length))
       sPut('r-' + det + '-bak' + new Date().getDay(), d1).catch(() => {});
@@ -527,7 +534,9 @@ function syncPushSoon() {
       const orders = { ...(allOrders[rater] || {}) };
       // merge-preserve: pull the server copy and keep anything we don't have,
       // so a stale device can never wipe another device's work
-      const srv = await sGet('r-' + myDocKey).catch(() => null);
+      const srv = await sGet('r-' + myDocKey).catch(() => undefined);
+      if (srv !== undefined) serverSeen = true;
+      else if (!serverSeen) { syncStat('⚠ אין קשר לענן — הדירוג שמור מקומית'); return; }
       if (srv) {
         for (const [id, v] of Object.entries(srv.ratings || {}))
           if (!hasData(ratings[id]) && hasData(v)) ratings[id] = v;
@@ -1157,7 +1166,10 @@ function orderedTracks() {
 
 function renderRList() {
   rTouched = (myOrders()[rGroup] || []).length > 0;
-  const list = orderedTracks();
+  renderRListFrom(orderedTracks());
+}
+
+function renderRListFrom(list) {
   $('#rlist').innerHTML = list.map((t, i) => {
     const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
     const mm = Math.floor(t.dur_s / 60), ss = String(Math.round(t.dur_s % 60)).padStart(2, '0');
@@ -1234,6 +1246,13 @@ document.addEventListener('pointerup', () => {
   saveOrderFromDom();
 });
 
+$('#rsuggest').onclick = () => {
+  const groups = rankGroups();
+  const sorted = groups[rGroup].items.slice().sort((a, b) => +claude10(b) - +claude10(a));
+  renderRListFrom(sorted);
+  toast('סדר מוצע לפי הדירוג שלי — גררו לתקן, או שמרו כמו שזה');
+};
+$('#rsave').onclick = () => { saveOrderFromDom(); toast('הסדר נשמר ☁'); };
 $('#rankbtn').onclick = openRanker;
 $('#rexit').onclick = () => { music.pause(); speech.pause(); $('#ranker').classList.add('hidden'); render(); };
 $('#rspeech').onclick = () => { $('#speechbtn').click(); $('#rspeech').classList.toggle('on', speechOn); };
