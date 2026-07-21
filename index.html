@@ -451,6 +451,9 @@ async function syncLoadRater(name) {
     // gather every server copy of this rater: deterministic doc + legacy doc (old random key)
     const sources = [], bsrc = [];
     const d1 = await sGet('r-' + det).catch(() => null);
+    // rolling daily snapshot: keep the last 7 days of this rater's doc
+    if (d1 && (Object.keys(d1.ratings || {}).length || (d1.battles || []).length || Object.keys(d1.orders || {}).length))
+      sPut('r-' + det + '-bak' + new Date().getDay(), d1).catch(() => {});
     if (d1 && d1.ratings) sources.push(d1.ratings);
     if (d1 && d1.battles) bsrc.push(d1.battles);
     const osrc = [];
@@ -520,7 +523,27 @@ function syncPushSoon() {
     try {
       const ratings = {};
       for (const [id, v] of Object.entries(mine())) if (hasData(v)) ratings[id] = v;
-      const r = await sPut('r-' + myDocKey, { rater, updated: new Date().toISOString(), ratings, battles: allBattles[rater] || [], orders: allOrders[rater] || {} });
+      let battles = (allBattles[rater] || []).slice();
+      const orders = { ...(allOrders[rater] || {}) };
+      // merge-preserve: pull the server copy and keep anything we don't have,
+      // so a stale device can never wipe another device's work
+      const srv = await sGet('r-' + myDocKey).catch(() => null);
+      if (srv) {
+        for (const [id, v] of Object.entries(srv.ratings || {}))
+          if (!hasData(ratings[id]) && hasData(v)) ratings[id] = v;
+        for (const [g, arr] of Object.entries(srv.orders || {}))
+          if ((!orders[g] || !orders[g].length) && arr && arr.length) orders[g] = arr;
+        const seenB = new Set(battles.map(b => b.t + b.a + b.b));
+        for (const b of (srv.battles || []))
+          if (b && !seenB.has(b.t + b.a + b.b)) { battles.push(b); seenB.add(b.t + b.a + b.b); }
+        // reflect the merged truth locally too
+        allBattles[rater] = battles; localStorage.setItem(LSB, JSON.stringify(allBattles));
+        allOrders[rater] = orders; localStorage.setItem(LSO, JSON.stringify(allOrders));
+        const loc = all[rater] || (all[rater] = {});
+        for (const [id, v] of Object.entries(ratings)) if (!hasData(loc[id])) loc[id] = v;
+        localStorage.setItem(LS2, JSON.stringify(all));
+      }
+      const r = await sPut('r-' + myDocKey, { rater, updated: new Date().toISOString(), ratings, battles, orders });
       syncStat(r.ok ? '☁ נשמר ' + new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '⚠ מקומי בלבד');
     } catch (e) { syncStat('⚠ מקומי בלבד'); }
   }, 1200);
